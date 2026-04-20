@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>휘일 · 재고·발주 부족량 점검</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"
+  />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+</head>
+<body class="app-body">
+  <aside class="sidebar" aria-label="메뉴">
+    <button type="button" class="sidebar-brand" id="sidebarBrandHome" aria-label="메인 화면으로 이동">
+      <img class="brand-mark" src="assets/company-mark.png" width="76" height="76" alt="휘일" decoding="async" />
+      <div class="brand-text">
+        <div class="brand-title">휘일 생산관리</div>
+        <div class="brand-sub">발주·재고·작업일지 데이터 보드</div>
+      </div>
+    </button>
+    <nav class="sidebar-nav">
+      <div class="nav-group nav-group--first" role="group" aria-label="발주서·발주 보드">
+        <div class="nav-group__title nav-group__title--section">발주서</div>
+        <button type="button" class="nav-item" data-view="upload">발주서 엑셀 업로드</button>
+        <button type="button" class="nav-item" data-view="daily" data-team-segment="">일별 통합표</button>
+        <button type="button" class="nav-item" data-view="orderCalendar">날짜별 발주 달력</button>
+        <button type="button" class="nav-item" data-view="stockTable">재고</button>
+        <button type="button" class="nav-item" data-view="summary">요약</button>
+      </div>
+      <div class="nav-group" role="group" aria-label="팀별 자료">
+        <div class="nav-group__title nav-group__title--section">팀</div>
+        <button type="button" class="nav-item nav-item--team-hub" data-view="teamProductionUpload">생산 엑셀 업로드</button>
+        <button type="button" class="nav-item nav-item--sub" data-view="drawingLog">드로잉</button>
+        <button type="button" class="nav-item nav-item--sub" data-view="parallelLog">페럴</button>
+        <button type="button" class="nav-item nav-item--sub" data-view="mufflerLog">머플러</button>
+        <button type="button" class="nav-item nav-item--sub" data-view="doublePipeLog">이중관</button>
+        <button type="button" class="nav-item nav-item--sub" data-view="hwaseungDoublePipeLog">화승이중관</button>
+      </div>
+      <div class="sidebar-nav-divider sidebar-nav-divider--spectrum" role="presentation" aria-hidden="true"></div>
+      <div class="sidebar-nav-follow">
+        <button type="button" class="nav-item nav-item--sub" data-view="stockUnitPrice">재고 단가</button>
+      </div>
+    </nav>
+  </aside>
+
+  <div class="main-wrap">
+    <header class="km-strip" aria-hidden="true">
+      <span class="km-strip__marks">
+        <span class="km-strip__seg km-strip__seg--blue"></span>
+        <span class="km-strip__seg km-strip__seg--green"></span>
+        <span class="km-strip__seg km-strip__seg--amber"></span>
+        <span class="km-strip__seg km-strip__seg--red"></span>
+      </span>
+      <p class="km-strip__text">발주·재고·팀 작업일지를 한곳에서 빠르게 확인하세요.</p>
+    </header>
+    <section id="viewHome" class="view view-home">
+      <div class="home-layout" role="navigation" aria-label="메인 메뉴">
+        <div class="home-banner">
+          <div class="home-banner__grid">
+            <div class="home-banner__copy">
+              <p class="home-banner__kicker">휘일 생산관리</p>
+              <p class="home-banner__badge">발주 · 재고 · 팀 작업일지</p>
+              <h1 class="home-banner__head">
+                숫자가 보이면<br />
+                <span class="home-banner__accent">생산이 보입니다</span>
+              </h1>
+              <p class="home-banner__sub">
+                발주·재고는 보드로, 팀별 작업일지는 타임라인으로. 왼쪽 위 로고를 누르면 언제든 이 화면으로 돌아옵니다.
+              </p>
+              <div class="home-banner__actions">
+                <button type="button" class="home-banner__cta" data-view="upload">발주서 엑셀 업로드</button>
+                <button type="button" class="home-banner__ghost" data-view="daily" data-team-segment="">일별 통합표 열기</button>
+              </div>
+            </div>
+            <div class="home-banner__visual" aria-hidden="true">
+              <div class="home-banner__card home-banner__card--a"></div>
+              <div class="home-banner__card home-banner__card--b"></div>
+              <div class="home-banner__card home-banner__card--c"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-spotlight" role="navigation" aria-label="빠른 이동">
+          <button type="button" class="home-spotlight__btn" data-view="orderCalendar">
+            <span class="home-spotlight__ico" aria-hidden="true">달</span>
+            <span class="home-spotlight__text">
+              <span class="home-spotlight__label">날짜별 발주 달력</span>
+              <span class="home-spotlight__hint">월 단위 · 제품별 합계</span>
+            </span>
+          </button>
+          <button type="button" class="home-spotlight__btn" data-view="stockTable">
+            <span class="home-spotlight__ico" aria-hidden="true">재</span>
+            <span class="home-spotlight__text">
+              <span class="home-spotlight__label">재고</span>
+              <span class="home-spotlight__hint">품목코드 · 현재고 필터</span>
+            </span>
+          </button>
+          <button type="button" class="home-spotlight__btn" data-view="summary">
+            <span class="home-spotlight__ico" aria-hidden="true">요</span>
+            <span class="home-spotlight__text">
+              <span class="home-spotlight__label">요약</span>
+              <span class="home-spotlight__hint">타입·기간 집계</span>
+            </span>
+          </button>
+        </div>
+
+        <div class="home-section">
+          <div class="home-section__head">
+            <span class="home-section__step" aria-hidden="true">01</span>
+            <div class="home-section__head-text">
+              <h2 class="home-section__title">발주 · 재고</h2>
+              <p class="home-section__desc">발주서·재고는 여기서, 팀 작업일지 엑셀은 왼쪽 <strong>생산 엑셀 업로드</strong>에서 올리면 됩니다.</p>
+            </div>
+          </div>
+          <div class="home-row home-row--2">
+            <button type="button" class="home-tile home-tile--xl" data-view="upload">
+              <span class="home-tile__tag">발주</span>
+              <span class="home-tile__icon" aria-hidden="true">업</span>
+              <span class="home-tile__title">발주서 엑셀 업로드</span>
+              <span class="home-tile__text">발주서 입력 · 지난발주서 · 재고파일을 넣으면 자동으로 표에 반영됩니다.</span>
+            </button>
+            <button type="button" class="home-tile home-tile--xl home-tile--mint" data-view="daily" data-team-segment="">
+              <span class="home-tile__tag">보드</span>
+              <span class="home-tile__icon" aria-hidden="true">표</span>
+              <span class="home-tile__title">일별 통합표</span>
+              <span class="home-tile__text">구분·품목코드·제품명·날짜 열이 있는 발주 보드와 동일한 구조입니다.</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="home-section home-section--split">
+          <div class="home-split__col">
+            <h2 class="home-section__title home-section__title--sm">요약</h2>
+            <p class="home-section__desc">업로드한 데이터 기준 집계를 봅니다.</p>
+            <button type="button" class="home-pill" data-view="summary">요약 화면으로 →</button>
+          </div>
+          <div class="home-split__col home-split__col--line">
+            <h2 class="home-section__title home-section__title--sm">일별 통합표 · 구간</h2>
+            <p class="home-section__desc">드로잉팀 구간만 좁혀 볼 때 사용합니다.</p>
+            <div class="home-chip-row">
+              <button type="button" class="home-chip" data-view="daily" data-team-segment="이중관">이중관</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="viewUpload" class="view" hidden>
+      <div class="panel">
+        <h2 class="view-title">발주서 엑셀 업로드</h2>
+        <p class="view-desc">시트 「발주서 입력」(발주량·차이수량·부족품 등)과 「지난발주서」(지난발주)가 있으면 같은 파일에서 함께 읽습니다. 세로 형식(날짜·품목별 행)은 첫 행 헤더를 기준으로 열이 자동 맞춰집니다.</p>
+        <label class="dropzone" id="dropzone">
+          <input type="file" id="fileInput" accept=".xlsx,.xls" hidden />
+          <span class="dropzone__text">파일 선택 또는 여기로 드래그</span>
+          <span class="dropzone__hint">.xlsx / .xls · 시트 「발주서 입력」</span>
+        </label>
+        <p class="file-name" id="fileName"></p>
+        <p class="sheet-info" id="sheetInfo"></p>
+
+        <label class="dropzone dropzone--sub">
+          <input type="file" id="stockFileInput" accept=".xlsx,.xls" hidden />
+          <span class="dropzone__text">재고파일 선택</span>
+          <span class="dropzone__hint">재고 파일 업로드 시 재고 열 + 차이수량(일별)에 반영</span>
+        </label>
+        <p class="file-name" id="stockFileName"></p>
+        <p class="sheet-info" id="stockSheetInfo"></p>
+
+        <div class="mapping" id="mappingBlock" hidden>
+          <h3>열 매핑</h3>
+          <p class="hint">자동으로 열을 맞추지 못했을 때만 이 영역이 열립니다. 아래에서 열을 고른 뒤 「표 다시 만들기」를 눌러 주세요.</p>
+          <div class="mapping-grid">
+            <label>날짜 열
+              <select id="colDate"></select>
+            </label>
+            <label>제품명 열
+              <select id="colName"></select>
+            </label>
+            <label>품목코드 열
+              <select id="colCode"></select>
+            </label>
+            <label>타입 열
+              <select id="colType"></select>
+            </label>
+            <label>발주량 열
+              <select id="colQty"></select>
+            </label>
+            <label>재고 열 (선택)
+              <select id="colStock"></select>
+            </label>
+          </div>
+          <button type="button" class="btn primary" id="btnApply">표 다시 만들기</button>
+        </div>
+
+        <p class="upload-hint">발주 파일 반영 후 재고파일을 추가로 넣으면 <strong>재고 열</strong>과 <strong>차이수량(일별)</strong>이 갱신됩니다. 화면은 그대로 두며, 왼쪽 메뉴에서 <strong>일별 통합표</strong> 등을 열면 됩니다. 팀 작업일지 엑셀은 <strong>생산 엑셀 업로드</strong> 메뉴에서 올려 주세요.</p>
+      </div>
+    </section>
+
+    <section id="viewTeamProductionUpload" class="view" hidden>
+      <div class="panel panel--flush team-prod-hub">
+        <div class="table-toolbar">
+          <div>
+            <h2 class="view-title view-title--inline">생산 엑셀 업로드</h2>
+            <p class="view-desc view-desc--toolbar">팀별 작업일지 형식의 엑셀을 아래에서 골라 올리면, 읽기에 성공했을 때 해당 팀 화면으로 이동해 요약·표가 표시됩니다.</p>
+          </div>
+        </div>
+        <div class="team-prod-hub__grid" role="list">
+          <div class="team-prod-hub__card" role="listitem">
+            <h3 class="team-prod-hub__name">드로잉</h3>
+            <p class="team-prod-hub__hint">「드로잉」 시트 기준</p>
+            <label class="dropzone team-prod-hub__drop" id="teamProdDrawingDropzone">
+              <input type="file" id="teamProdDrawingFileInput" accept=".xlsx,.xls" hidden />
+              <span class="dropzone__text">파일 선택 또는 드래그</span>
+              <span class="dropzone__hint">.xlsx / .xls</span>
+            </label>
+          </div>
+          <div class="team-prod-hub__card" role="listitem">
+            <h3 class="team-prod-hub__name">페럴</h3>
+            <p class="team-prod-hub__hint">「페럴」 시트 기준</p>
+            <label class="dropzone team-prod-hub__drop" id="teamProdParallelDropzone">
+              <input type="file" id="teamProdParallelFileInput" accept=".xlsx,.xls" hidden />
+              <span class="dropzone__text">파일 선택 또는 드래그</span>
+              <span class="dropzone__hint">.xlsx / .xls</span>
+            </label>
+          </div>
+          <div class="team-prod-hub__card" role="listitem">
+            <h3 class="team-prod-hub__name">머플러</h3>
+            <p class="team-prod-hub__hint">머플러·단조머플러 시트</p>
+            <label class="dropzone team-prod-hub__drop" id="teamProdMufflerDropzone">
+              <input type="file" id="teamProdMufflerFileInput" accept=".xlsx,.xls" hidden />
+              <span class="dropzone__text">파일 선택 또는 드래그</span>
+              <span class="dropzone__hint">.xlsx / .xls</span>
+            </label>
+          </div>
+          <div class="team-prod-hub__card" role="listitem">
+            <h3 class="team-prod-hub__name">이중관</h3>
+            <p class="team-prod-hub__hint">「이중관」 시트 기준</p>
+            <label class="dropzone team-prod-hub__drop" id="teamProdDoublePipeDropzone">
+              <input type="file" id="teamProdDoublePipeFileInput" accept=".xlsx,.xls" hidden />
+              <span class="dropzone__text">파일 선택 또는 드래그</span>
+              <span class="dropzone__hint">.xlsx / .xls</span>
+            </label>
+          </div>
+          <div class="team-prod-hub__card" role="listitem">
+            <h3 class="team-prod-hub__name">화승이중관</h3>
+            <p class="team-prod-hub__hint">「화승이중관」 시트 기준</p>
+            <label class="dropzone team-prod-hub__drop" id="teamProdHwaseungDropzone">
+              <input type="file" id="teamProdHwaseungFileInput" accept=".xlsx,.xls" hidden />
+              <span class="dropzone__text">파일 선택 또는 드래그</span>
+              <span class="dropzone__hint">.xlsx / .xls</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="viewDaily" class="view" hidden>
+      <div class="panel panel--flush">
+        <div class="table-toolbar">
+          <div>
+            <h2 class="view-title view-title--inline">일별 통합표</h2>
+            <p class="view-desc view-desc--toolbar">구분·품목·날짜별 발주량 (엑셀 보드와 동일한 구조)<span id="dailyTeamHint" class="view-desc__team" hidden></span></p>
+          </div>
+          <div class="toolbar-actions">
+            <span class="badge" id="rowCount">0건</span>
+            <button type="button" class="btn ghost" id="btnExport" disabled>엑셀로 내보내기</button>
+          </div>
+        </div>
+        <div id="dailyFiltersSlotDaily" class="daily-filters-slot">
+        <div class="filter-bar filter-bar--hidden" id="dailyFilters" aria-label="표 필터">
+          <div class="filter-field">
+            <span class="filter-label">구분</span>
+            <div class="picker" id="pickerGubun">
+              <button type="button" class="picker-btn" id="btnFilterGubun">전체</button>
+              <div class="picker-panel" id="panelFilterGubun" hidden>
+                <input type="search" class="picker-search" id="searchFilterGubun" placeholder="구분 검색" autocomplete="off" />
+                <div class="picker-list" id="listFilterGubun"></div>
+              </div>
+            </div>
+          </div>
+          <div class="filter-field">
+            <span class="filter-label">품목코드</span>
+            <div class="picker" id="pickerCode">
+              <button type="button" class="picker-btn" id="btnFilterCode">전체</button>
+              <div class="picker-panel" id="panelFilterCode" hidden>
+                <input type="search" class="picker-search" id="searchFilterCode" placeholder="코드 검색" autocomplete="off" />
+                <div class="picker-list" id="listFilterCode"></div>
+              </div>
+            </div>
+          </div>
+          <div class="filter-field">
+            <span class="filter-label">제품</span>
+            <div class="picker" id="pickerName">
+              <button type="button" class="picker-btn" id="btnFilterName">전체</button>
+              <div class="picker-panel" id="panelFilterName" hidden>
+                <input type="search" class="picker-search" id="searchFilterName" placeholder="제품 검색" autocomplete="off" />
+                <div class="picker-list" id="listFilterName"></div>
+              </div>
+            </div>
+          </div>
+          <div class="filter-field">
+            <span class="filter-label">타입</span>
+            <div class="picker" id="pickerType">
+              <button type="button" class="picker-btn" id="btnFilterType">전체</button>
+              <div class="picker-panel" id="panelFilterType" hidden>
+                <input type="search" class="picker-search" id="searchFilterType" placeholder="타입 검색" autocomplete="off" />
+                <div class="picker-list" id="listFilterType"></div>
+              </div>
+            </div>
+          </div>
+          <div class="filter-field">
+            <span class="filter-label">수출발주량</span>
+            <div class="picker" id="pickerExport">
+              <button type="button" class="picker-btn" id="btnFilterExport">전체</button>
+              <div class="picker-panel" id="panelFilterExport" hidden>
+                <input type="search" class="picker-search" id="searchFilterExport" placeholder="수출발주량 검색" autocomplete="off" />
+                <div class="picker-list" id="listFilterExport"></div>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-filter" id="filterReset">초기화</button>
+        </div>
+        </div>
+        <div class="table-wrap" id="tableWrap">
+          <div class="empty-state" id="emptyState">
+            발주서 엑셀 업로드에서 파일을 먼저 넣어 주세요.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="viewOrderCalendar" class="view" hidden>
+      <div class="panel panel--flush order-calendar-view">
+        <div class="table-toolbar">
+          <div>
+            <h2 class="view-title view-title--inline">날짜별 발주 달력</h2>
+            <p class="view-desc view-desc--toolbar">
+              날짜마다 품목을 묶어 보여 줍니다. 아래 필터는 일별 통합표와 동일하며, 「발주량」만 달력에 반영됩니다.<span id="orderCalTeamHint" class="view-desc__team" hidden></span>
+            </p>
+          </div>
+        </div>
+        <div id="dailyFiltersSlotCalendar" class="daily-filters-slot"></div>
+        <div class="order-calendar-panel order-calendar-panel--page" id="orderCalendarPanel" hidden>
+          <div class="order-calendar-head order-calendar-head--toolbar">
+            <div class="order-calendar-type-wrap">
+              <label class="order-calendar-type-label" for="orderCalendarTypeSelect">타입</label>
+              <select id="orderCalendarTypeSelect" class="order-calendar-type-select" aria-label="달력에서 타입 선택"></select>
+              <span id="orderCalendarTypeActive" class="order-calendar-type-active" aria-live="polite"></span>
+            </div>
+            <div class="order-calendar-nav" role="group" aria-label="월 이동">
+              <button type="button" class="order-calendar-nav__btn" id="orderCalPrev" aria-label="이전 달">‹</button>
+              <span class="order-calendar-nav__label" id="orderCalMonthLabel">—</span>
+              <button type="button" class="order-calendar-nav__btn" id="orderCalNext" aria-label="다음 달">›</button>
+            </div>
+          </div>
+          <div id="orderCalendarMonthSummary" class="order-calendar-month-summary" hidden aria-live="polite"></div>
+          <div class="order-calendar-weekdays" aria-hidden="true">
+            <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+          </div>
+          <div class="order-calendar-grid" id="orderCalendarGrid"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="viewStockTable" class="view" hidden>
+      <div class="panel panel--flush" id="stockTablePanel">
+        <div class="table-toolbar">
+          <div>
+            <h2 class="view-title view-title--inline">재고</h2>
+            <p class="view-desc view-desc--toolbar">
+              <strong>발주서 엑셀 업로드</strong>에서 재고파일을 넣으면 <strong>품목코드</strong>·<strong>품목명</strong>·<strong>현재고</strong>가 여기에 표시됩니다. 엑셀에 <strong>카테고리</strong>·<strong>구분</strong>·<strong>분류</strong> 등 열이 있으면 표에 넣고 필터로 좁힐 수 있습니다.
+            </p>
+          </div>
+        </div>
+        <div class="filter-bar filter-bar--hidden" id="stockTableFilterBar" aria-label="재고 필터">
+          <div class="filter-field" id="stockFilterFieldCategory" hidden>
+            <span class="filter-label">카테고리</span>
+            <div class="picker" id="pickerStockCategory">
+              <button type="button" class="picker-btn" id="btnFilterStockCategory">전체</button>
+              <div class="picker-panel" id="panelFilterStockCategory" hidden>
+                <input type="search" class="picker-search" id="searchFilterStockCategory" placeholder="카테고리 검색" autocomplete="off" />
+                <div class="picker-list" id="listFilterStockCategory"></div>
+              </div>
+            </div>
+          </div>
+          <div class="filter-field">
+            <span class="filter-label">품목코드</span>
+            <div class="picker" id="pickerStockCode">
+              <button type="button" class="picker-btn" id="btnFilterStockCode">전체</button>
+              <div class="picker-panel" id="panelFilterStockCode" hidden>
+                <input type="search" class="picker-search" id="searchFilterStockCode" placeholder="예: ppf" autocomplete="off" />
+                <div class="stock-picker-actions">
+                  <button type="button" class="btn btn-filter stock-picker-actions__btn" id="btnStockCodeSelectBySearch">검색어 일치 전부 선택</button>
+                  <button type="button" class="btn btn-filter stock-picker-actions__btn" id="btnStockCodeClearBySearch">일치 항목 선택 해제</button>
+                </div>
+                <div class="picker-list" id="listFilterStockCode"></div>
+              </div>
+            </div>
+          </div>
+          <div class="filter-field">
+            <span class="filter-label">품목명</span>
+            <div class="picker" id="pickerStockName">
+              <button type="button" class="picker-btn" id="btnFilterStockName">전체</button>
+              <div class="picker-panel" id="panelFilterStockName" hidden>
+                <input type="search" class="picker-search" id="searchFilterStockName" placeholder="품목명 검색" autocomplete="off" />
+                <div class="stock-picker-actions">
+                  <button type="button" class="btn btn-filter stock-picker-actions__btn" id="btnStockNameSelectBySearch">검색어 일치 전부 선택</button>
+                  <button type="button" class="btn btn-filter stock-picker-actions__btn" id="btnStockNameClearBySearch">일치 항목 선택 해제</button>
+                </div>
+                <div class="picker-list" id="listFilterStockName"></div>
+              </div>
+            </div>
+          </div>
+          <div class="filter-field">
+            <span class="filter-label">현재고</span>
+            <div class="picker" id="pickerStockQty">
+              <button type="button" class="picker-btn" id="btnFilterStockQty">전체</button>
+              <div class="picker-panel" id="panelFilterStockQty" hidden>
+                <input type="search" class="picker-search" id="searchFilterStockQty" placeholder="숫자 검색" autocomplete="off" />
+                <div class="picker-list" id="listFilterStockQty"></div>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-filter" id="stockTableFilterReset">초기화</button>
+        </div>
+        <div class="table-wrap" id="stockTableWrap">
+          <div class="empty-state" id="stockTableEmpty">발주서 엑셀 업로드에서 재고파일을 넣으면 목록이 표시됩니다.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="viewDrawingLog" class="view" hidden>
+      <div class="panel">
+        <h2 class="view-title">드로잉 작업일지</h2>
+        <p class="view-desc">엑셀은 왼쪽 메뉴 <strong>생산 엑셀 업로드</strong>에서 올려 주세요. 읽기에 성공하면 이 화면으로 이동하며, 아래에 <strong>가동·생산·불량·정지</strong> 요약과 <strong>월·설비별 표</strong>, <strong>작업일자 필터</strong>가 표시됩니다. 같은 파일에 정비·고장 시트가 있으면 그에 맞는 표도 함께 붙습니다.</p>
+        <div id="drawingLogEmpty" class="empty-state empty-state--flat">
+          아직 데이터가 없습니다. 왼쪽 <strong>생산 엑셀 업로드</strong>에서 드로잉 작업일지 파일을 올리면 이곳이 채워집니다.
+        </div>
+        <div id="drawingLogContent" class="drawing-log-content" hidden>
+          <p class="drawing-log-meta" id="drawingLogMeta"></p>
+          <div id="drawingLogTimeline" class="drawing-log-timeline" hidden aria-label="작업일자 필터">
+            <div class="drawing-log-timeline__toolbar">
+              <span class="drawing-log-timeline__label">작업일자</span>
+              <button type="button" class="drawing-log-timeline__clear" id="drawingLogSlicerClear" title="선택 해제">필터 지우기</button>
+              <label class="drawing-log-timeline__gran">
+                단위
+                <select id="drawingLogGranularity" aria-label="집계 단위">
+                  <option value="month">월</option>
+                  <option value="day">일</option>
+                </select>
+              </label>
+            </div>
+            <div class="drawing-log-timeline__selection" id="drawingLogSlicerSelection" aria-live="polite"></div>
+            <div class="drawing-log-timeline__year">
+              <button type="button" class="drawing-log-timeline__nav" id="drawingLogYearPrev" aria-label="이전 연도">‹</button>
+              <span class="drawing-log-timeline__year-label" id="drawingLogYearLabel">—</span>
+              <button type="button" class="drawing-log-timeline__nav" id="drawingLogYearNext" aria-label="다음 연도">›</button>
+            </div>
+            <div id="drawingLogMonthStrip" class="drawing-log-timeline__months" role="group" aria-label="월 선택"></div>
+            <div id="drawingLogDayStrip" class="drawing-log-timeline__days" role="group" aria-label="일 선택" hidden></div>
+          </div>
+          <div class="kpi-grid" role="group" aria-label="효율 지표 (열이 있을 때)">
+            <div class="kpi-card">
+              <div class="kpi-card__label">가동율</div>
+              <div class="kpi-card__value" id="kpiUtil">—</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-card__label">설비효율</div>
+              <div class="kpi-card__value" id="kpiOee">—</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-card__label" id="kpiDefectLabel">불량율</div>
+              <div class="kpi-card__value" id="kpiDefect">—</div>
+            </div>
+          </div>
+          <p id="drawingLogOps" class="drawing-log-ops" hidden></p>
+          <div id="drawingLogTablesWrap" class="drawing-log-tables" hidden></div>
+          <div id="drawingLogProdWrap" class="drawing-log-prod-wrap" hidden></div>
+          <div id="drawingLogMaintWrap" class="drawing-log-maint-wrap" hidden></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="viewParallelLog" class="view" hidden>
+      <div class="panel">
+        <h2 class="view-title">페럴 작업일지</h2>
+        <p class="view-desc">엑셀은 왼쪽 메뉴 <strong>생산 엑셀 업로드</strong>에서 올려 주세요. 읽기에 성공하면 이 화면으로 이동하며, <strong>가동·생산·불량·정지</strong> 요약과 <strong>월·설비별 표</strong>, <strong>절단·벤딩 공정별 표</strong>, <strong>작업일자·공정 필터</strong>가 표시됩니다. 같은 파일에 정비·고장 시트가 있으면 그에 맞는 표도 함께 붙습니다.</p>
+        <div id="parallelLogEmpty" class="empty-state empty-state--flat">
+          아직 데이터가 없습니다. 왼쪽 <strong>생산 엑셀 업로드</strong>에서 페럴 작업일지 파일을 올리면 이곳이 채워집니다.
+        </div>
+        <div id="parallelLogContent" class="drawing-log-content" hidden>
+          <p class="drawing-log-meta" id="parallelLogMeta"></p>
+          <div id="parallelLogTimeline" class="drawing-log-timeline" hidden aria-label="작업일자 필터">
+            <div class="drawing-log-timeline__toolbar">
+              <span class="drawing-log-timeline__label">작업일자</span>
+              <div class="drawing-log-timeline__process-filters" role="group" aria-label="공정 필터">
+                <label class="drawing-log-timeline__chk"><input type="checkbox" id="parallelLogFilterCut" checked /> 절단</label>
+                <label class="drawing-log-timeline__chk"><input type="checkbox" id="parallelLogFilterBend" checked /> 벤딩</label>
+              </div>
+              <button type="button" class="drawing-log-timeline__clear" id="parallelLogSlicerClear" title="선택 해제">필터 지우기</button>
+              <label class="drawing-log-timeline__gran">
+                단위
+                <select id="parallelLogGranularity" aria-label="집계 단위">
+                  <option value="month">월</option>
+                  <option value="day">일</option>
+                </select>
+              </label>
+              <label class="drawing-log-timeline__gran">
+                상단 KPI
+                <select id="parallelLogKpiScope" aria-label="상단 KPI 집계 범위">
+                  <option value="overall">종합</option>
+                  <option value="process" selected>공정별</option>
+                </select>
+              </label>
+            </div>
+            <div class="drawing-log-timeline__selection" id="parallelLogSlicerSelection" aria-live="polite"></div>
+            <div class="drawing-log-timeline__year">
+              <button type="button" class="drawing-log-timeline__nav" id="parallelLogYearPrev" aria-label="이전 연도">‹</button>
+              <span class="drawing-log-timeline__year-label" id="parallelLogYearLabel">—</span>
+              <button type="button" class="drawing-log-timeline__nav" id="parallelLogYearNext" aria-label="다음 연도">›</button>
+            </div>
+            <div id="parallelLogMonthStrip" class="drawing-log-timeline__months" role="group" aria-label="월 선택"></div>
+            <div id="parallelLogDayStrip" class="drawing-log-timeline__days" role="group" aria-label="일 선택" hidden></div>
+          </div>
+          <div class="kpi-grid" role="group" aria-label="효율 지표 (열이 있을 때)">
+            <div class="kpi-card">
+              <div class="kpi-card__label">가동율</div>
+              <div class="kpi-card__value" id="kpiUtilParallel">—</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-card__label">설비효율</div>
+              <div class="kpi-card__value" id="kpiOeeParallel">—</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-card__label" id="kpiDefectLabelParallel">불량율</div>
+              <div class="kpi-card__value" id="kpiDefectParallel">—</div>
+            </div>
+          </div>
+          <p id="parallelLogOps" class="drawing-log-ops" hidden></p>
+          <div id="parallelLogTablesWrap" class="drawing-log-tables" hidden></div>
+          <div id="parallelLogProdWrap" class="drawing-log-prod-wrap" hidden></div>
+          <div id="parallelLogMaintWrap" class="drawing-log-maint-wrap" hidden></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="viewDoublePipeLog" class="view" hidden>
+      <div class="panel">
+        <h2 class="view-title">이중관 작업일지</h2>
+        <p class="view-desc">
+          엑셀은 왼쪽 메뉴 <strong>생산 엑셀 업로드</strong>에서 올려 주세요. 읽기에 성공하면 이 화면으로 이동하며, <strong>가동·생산·불량·비가동</strong> 요약과
+          <strong>월·설비·가공·성형</strong>별 표, <strong>작업일자 필터</strong>가 표시됩니다. 양식 기준:
+          생산 <strong>N</strong>열, 비가동 <strong>S~V</strong>열, 불량 <strong>W·AJ</strong>열 합계입니다. 같은 파일에 정비·고장 시트가 있으면 아래에 함께 표시됩니다.
+        </p>
+        <div id="doublePipeLogEmpty" class="empty-state empty-state--flat">
+          아직 데이터가 없습니다. 왼쪽 <strong>생산 엑셀 업로드</strong>에서 이중관 작업일지 파일을 올리면 이곳이 채워집니다.
+        </div>
+        <div id="doublePipeLogContent" class="drawing-log-content" hidden>
+          <p class="drawing-log-meta" id="doublePipeLogMeta"></p>
+          <div id="doublePipeLogTimeline" class="drawing-log-timeline" hidden aria-label="작업일자 필터">
+            <div class="drawing-log-timeline__toolbar">
+              <span class="drawing-log-timeline__label">작업일자</span>
+              <div class="drawing-log-timeline__process-filters" role="group" aria-label="공정 필터">
+                <label class="drawing-log-timeline__chk"><input type="checkbox" id="doublePipeLogFilterMach" checked /> 가공</label>
+                <label class="drawing-log-timeline__chk"><input type="checkbox" id="doublePipeLogFilterForm" checked /> 성형</label>
+              </div>
+              <button type="button" class="drawing-log-timeline__clear" id="doublePipeLogSlicerClear" title="선택 해제">필터 지우기</button>
+              <label class="drawing-log-timeline__gran">
+                단위
+                <select id="doublePipeLogGranularity" aria-label="집계 단위">
+                  <option value="month">월</option>
+                  <option value="day">일</option>
+                </select>
+              </label>
+              <label class="drawing-log-timeline__gran">
+                상단 KPI
+                <select id="doublePipeLogKpiScope" aria-label="상단 KPI 집계 범위">
+                  <option value="overall">종합</option>
+                  <option value="process" selected>공정별</option>
+                </select>
+              </label>
+            </div>
+            <div class="drawing-log-timeline__selection" id="doublePipeLogSlicerSelection" aria-live="polite"></div>
+            <div class="drawing-log-timeline__year">
+              <button type="button" class="drawing-log-timeline__nav" id="doublePipeLogYearPrev" aria-label="이전 연도">‹</button>
+              <span class="drawing-log-timeline__year-label" id="doublePipeLogYearLabel">—</span>
+              <button type="button" class="drawing-log-timeline__nav" id="doublePipeLogYearNext" aria-label="다음 연도">›</button>
+            </div>
+            <div id="doublePipeLogMonthStrip" class="drawing-log-timeline__months" role="group" aria-label="월 선택"></div>
+            <div id="doublePipeLogDayStrip" class="drawing-log-timeline__days" role="group" aria-label="일 선택" hidden></div>
+          </div>
+          <div class="kpi-grid" role="group" aria-label="효율 지표 (열이 있을 때)">
+            <div class="kpi-card">
+              <div class="kpi-card__label">가동율</div>
+              <div class="kpi-card__value" id="kpiUtilDoublePipe">—</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-card__label">설비효율</div>
+              <div class="kpi-card__value" id="kpiOeeDoublePipe">—</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-card__label" id="kpiDefectLabelDoublePipe">불량율</div>
+              <div class="kpi-card__value" id="kpiDefectDoublePipe">—</div>
+            </div>
+          </div>
+          <p id="doublePipeLogOps" class="drawing-log-ops" hidden></p>
+          <div id="doublePipeLogTablesWrap" class="drawing-log-tables" hidden></div>
+          <div id="doublePipeLogProdWrap" class="drawing-log-prod-wrap" hidden></div>
+          <div id="doublePipeLogMaintWrap" class="drawing-log-maint-wrap" hidden></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="viewHwaseungDoublePipeLog" class="view" hidden>
+      <div class="panel">
+        <h2 class="view-title">화승 이중관 작업일지</h2>
+        <p class="view-desc">
+          엑셀은 왼쪽 메뉴 <strong>생산 엑셀 업로드</strong>에서 올려 주세요. 읽기에 성공하면 이 화면으로 이동하며, <strong>가동·생산·불량·비가동</strong> 요약과
+          <strong>월·설비·공정(전조·스파이럴·피어싱·확관·롤링·압착 등)</strong>별 표, <strong>작업일자 필터</strong>가 표시됩니다. 양식 기준:
+          생산 <strong>L</strong>열, 비가동 <strong>R~V</strong>열(다섯 구간), 불량은 소재 <strong>X+Y+Z</strong>(W열 합계와 이중 계산 방지),
+          공정 불량은 <strong>AK+AL+AR</strong>(AJ 합계와 이중 계산 방지)입니다. 같은 파일에 정비·고장 시트가 있으면 아래에 함께 표시됩니다.
+        </p>
+        <div id="hwaseungDoublePipeLogEmpty" class="empty-state empty-state--flat">
+          아직 데이터가 없습니다. 왼쪽 <strong>생산 엑셀 업로드</strong>에서 화승이중관 작업일지 파일을 올리면 이곳이 채워집니다.
+        </div>
+        <div id="hwaseungDoublePipeLogContent" class="drawing-log-content" hidden>
+          <p class="drawing-log-meta" id="hwaseungDoublePipeLogMeta"></p>
+          <div id="hwaseungDoublePipeLogTimeline" class="drawing-log-timeline" hidden aria-label="작업일자 필터">
+            <div class="drawing-log-timeline__toolbar">
+              <span class="drawing-log-timeline__label">작업일자</span>
+              <div id="hwaseungDoublePipeLogProcessFilters" class="drawing-log-timeline__process-filters" role="group" aria-label="공정 필터">
+                <label class="drawing-log-timeline__chk"><input type="checkbox" data-hwaseung-proc="전조" checked /> 전조</label>
+                <label class="drawing-log-timeline__chk"><input type="checkbox" data-hwaseung-proc="스파이럴" checked /> 스파이럴</label>
+                <label class="drawing-log-timeline__chk"><input type="checkbox" data-hwaseung-proc="피어싱, 확관" checked /> 피어싱·확관</label>
+                <label class="drawing-log-timeline__chk"><input type="checkbox" data-hwaseung-proc="수동 롤링" checked /> 수동 롤링</label>
+                <label class="drawing-log-timeline__chk"><input type="checkbox" data-hwaseung-proc="자동롤링" checked /> 자동롤링</label>
+                <label class="drawing-log-timeline__chk"><input type="checkbox" data-hwaseung-proc="압착" checked /> 압착</label>
+                <label class="drawing-log-timeline__chk"><input type="checkbox" data-hwaseung-proc="기타" checked /> 기타</label>
+              </div>
+              <button type="button" class="drawing-log-timeline__clear" id="hwaseungDoublePipeLogSlicerClear" title="선택 해제">필터 지우기</button>
+              <label class="drawing-log-timeline__gran">
+                단위
+                <select id="hwaseungDoublePipeLogGranularity" aria-label="집계 단위">
+                  <option value="month">월</option>
+                  <option value="day">일</option>
+                </select>
+              </label>
+              <label class="drawing-log-timeline__gran">
+                상단 KPI
+                <select id="hwaseungDoublePipeLogKpiScope" aria-label="상단 KPI 집계 범위">
+                  <option value="overall">종합</option>
+                  <option value="process" selected>공정별</option>
+                </select>
+              </label>
+            </div>
+            <div class="drawing-log-timeline__selection" id="hwaseungDoublePipeLogSlicerSelection" aria-live="polite"></div>
+            <div class="drawing-log-timeline__year">
+              <button type="button" class="drawing-log-timeline__nav" id="hwaseungDoublePipeLogYearPrev" aria-label="이전 연도">‹</button>
+              <span class="drawing-log-timeline__year-label" id="hwaseungDoublePipeLogYearLabel">—</span>
+              <button type="button" class="drawing-log-timeline__nav" id="hwaseungDoublePipeLogYearNext" aria-label="다음 연도">›</button>
+            </div>
+            <div id="hwaseungDoublePipeLogMonthStrip" class="drawing-log-timeline__months" role="group" aria-label="월 선택"></div>
+            <div id="hwaseungDoublePipeLogDayStrip" class="drawing-log-timeline__days" role="group" aria-label="일 선택" hidden></div>
+          </div>
+          <div class="kpi-grid" role="group" aria-label="효율 지표 (열이 있을 때)">
+            <div class="kpi-card">
+              <div class="kpi-card__label">가동율</div>
+              <div class="kpi-card__value" id="kpiUtilHwaseungDoublePipe">—</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-card__label">설비효율</div>
+              <div class="kpi-card__value" id="kpiOeeHwaseungDoublePipe">—</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-card__label" id="kpiDefectLabelHwaseungDoublePipe">불량율</div>
+              <div class="kpi-card__value" id="kpiDefectHwaseungDoublePipe">—</div>
+            </div>
+          </div>
+          <p id="hwaseungDoublePipeLogOps" class="drawing-log-ops" hidden></p>
+          <div id="hwaseungDoublePipeLogTablesWrap" class="drawing-log-tables" hidden></div>
+          <div id="hwaseungDoublePipeLogProdWrap" class="drawing-log-prod-wrap" hidden></div>
+          <div id="hwaseungDoublePipeLogMaintWrap" class="drawing-log-maint-wrap" hidden></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="viewMufflerLog" class="view" hidden>
+      <div class="panel">
+        <h2 class="view-title">머플러 작업일지</h2>
+        <p class="view-desc">엑셀은 왼쪽 메뉴 <strong>생산 엑셀 업로드</strong>에서 올려 주세요. 한 파일에 <strong>「머플러」</strong>와 <strong>「단조머플러」</strong> 시트가 있으면 읽은 뒤 이 화면에서 <strong>시트마다 따로</strong> 타임라인·지표·표가 붙습니다(행을 합치지 않음). 각 블록에서 <strong>가동·생산·불량·정지</strong>, <strong>월·설비·절단·포밍·가공</strong>을 좁혀 볼 수 있고, 같은 파일에 정비·고장 시트가 있으면 맨 아래에 함께 표시됩니다.</p>
+        <div id="mufflerLogEmpty" class="empty-state empty-state--flat">
+          아직 데이터가 없습니다. 왼쪽 <strong>생산 엑셀 업로드</strong>에서 머플러·단조 작업일지 파일을 올리면 이곳이 채워집니다.
+        </div>
+        <div id="mufflerLogContent" class="drawing-log-content" hidden>
+          <p class="drawing-log-meta" id="mufflerLogMeta"></p>
+          <div id="mufflerLogSegmentsHost" class="muffler-log-segments-host"></div>
+          <div id="mufflerLogMaintWrap" class="drawing-log-maint-wrap" hidden></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="viewStockUnitPrice" class="view" hidden>
+      <div class="panel">
+        <h2 class="view-title">재고 단가</h2>
+        <p class="view-desc">
+          <code>재고_단가.xlsx</code> 등 <strong>품목코드·품목명(또는 제품명)</strong>과 <strong>단가</strong>가 있는 파일을 올리면,
+          <strong>일별 통합표</strong>의 <strong>재고 금액</strong> 열에 <strong>재고 × 단가</strong>(원 단위 반올림)가 표시됩니다.
+          단가 열이 없고 <strong>매입기준액</strong>·<strong>현재고</strong>만 있으면 행마다 <strong>매입기준액 ÷ 현재고</strong>로 단가를 역산합니다.
+          여러 시트가 있으면 읽은 행 수가 가장 많은 시트를 사용합니다.
+        </p>
+        <label class="dropzone" id="stockUnitPriceDropzone">
+          <input type="file" id="stockUnitPriceFileInput" accept=".xlsx,.xls" hidden />
+          <span class="dropzone__text">재고_단가 파일 선택 또는 드래그</span>
+          <span class="dropzone__hint">품목코드 + 품목명(제품명)은 발주 보드와 동일하게 맞춰 주세요.</span>
+        </label>
+        <p class="file-name" id="stockUnitPriceFileName"></p>
+        <p class="sheet-info" id="stockUnitPriceSheetInfo"></p>
+        <div id="stockUnitPriceFilterBar" class="filter-bar filter-bar--hidden stock-unit-price-filter-bar" aria-label="재고 단가 품목코드 필터">
+          <div class="filter-field">
+            <span class="filter-label">품목코드</span>
+            <div class="picker" id="pickerStockUnitPriceCode">
+              <button type="button" class="picker-btn" id="btnStockUnitPriceFilterCode">전체</button>
+              <div class="picker-panel" id="panelStockUnitPriceFilterCode" hidden>
+                <input type="search" class="picker-search" id="searchStockUnitPriceFilterCode" placeholder="코드 검색" autocomplete="off" />
+                <div class="picker-list" id="listStockUnitPriceFilterCode"></div>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-filter" id="btnStockUnitPriceFilterReset">초기화</button>
+        </div>
+        <p class="stock-unit-price-error" id="stockUnitPriceError" role="alert" hidden></p>
+        <div class="table-wrap stock-unit-price-table-wrap" id="stockUnitPriceTableWrap" hidden></div>
+        <p class="upload-hint">
+          발주 데이터를 이미 올린 뒤 이 파일만 다시 바꿔도 즉시 반영됩니다. 단가를 바꾼 뒤에는 <strong>일별 통합표</strong>로 이동해 확인하세요.
+        </p>
+      </div>
+    </section>
+
+    <section id="viewSimple" class="view" hidden>
+      <div class="panel panel--flush">
+        <div class="table-toolbar">
+          <div>
+            <h2 class="view-title view-title--inline">간단 표</h2>
+            <p class="view-desc view-desc--toolbar">품목별로 날짜 열에 「발주량」 행만 표시합니다.</p>
+          </div>
+        </div>
+        <div class="table-wrap" id="simpleTableWrap">
+          <div class="empty-state" id="emptyStateSimple">
+            발주서 엑셀 업로드에서 파일을 먼저 넣어 주세요.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="viewSummary" class="view" hidden>
+      <div class="panel">
+        <h2 class="view-title">요약</h2>
+        <p class="view-desc">업로드한 데이터 기준 집계입니다.</p>
+        <div id="summaryContent" class="summary-grid"></div>
+      </div>
+    </section>
+  </div>
+
+  <script src="assets/default-unit-prices.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
