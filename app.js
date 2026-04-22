@@ -119,6 +119,7 @@
   const summaryContent = document.getElementById("summaryContent");
   const mainWrap = document.querySelector(".main-wrap");
   const kmStripEl = document.querySelector(".km-strip");
+  const btnSidebarToggle = document.getElementById("btnSidebarToggle");
   const viewHome = document.getElementById("viewHome");
   const viewUpload = document.getElementById("viewUpload");
   const viewTeamProductionUpload = document.getElementById("viewTeamProductionUpload");
@@ -180,6 +181,7 @@
   const parallelLogTablesWrap = document.getElementById("parallelLogTablesWrap");
   const parallelLogProdWrap = document.getElementById("parallelLogProdWrap");
   const parallelLogMaintWrap = document.getElementById("parallelLogMaintWrap");
+  const parallelLogDowntimeWrap = document.getElementById("parallelLogDowntimeWrap");
   const parallelLogOps = document.getElementById("parallelLogOps");
   const parallelLogTimeline = document.getElementById("parallelLogTimeline");
   const parallelLogSlicerClear = document.getElementById("parallelLogSlicerClear");
@@ -203,6 +205,7 @@
   const doublePipeLogTablesWrap = document.getElementById("doublePipeLogTablesWrap");
   const doublePipeLogProdWrap = document.getElementById("doublePipeLogProdWrap");
   const doublePipeLogMaintWrap = document.getElementById("doublePipeLogMaintWrap");
+  const doublePipeLogDowntimeWrap = document.getElementById("doublePipeLogDowntimeWrap");
   const doublePipeLogOps = document.getElementById("doublePipeLogOps");
   const doublePipeLogTimeline = document.getElementById("doublePipeLogTimeline");
   const doublePipeLogSlicerClear = document.getElementById("doublePipeLogSlicerClear");
@@ -226,6 +229,7 @@
   const hwaseungDoublePipeLogTablesWrap = document.getElementById("hwaseungDoublePipeLogTablesWrap");
   const hwaseungDoublePipeLogProdWrap = document.getElementById("hwaseungDoublePipeLogProdWrap");
   const hwaseungDoublePipeLogMaintWrap = document.getElementById("hwaseungDoublePipeLogMaintWrap");
+  const hwaseungDoublePipeLogDowntimeWrap = document.getElementById("hwaseungDoublePipeLogDowntimeWrap");
   const hwaseungDoublePipeLogOps = document.getElementById("hwaseungDoublePipeLogOps");
   const hwaseungDoublePipeLogTimeline = document.getElementById("hwaseungDoublePipeLogTimeline");
   const hwaseungDoublePipeLogSlicerClear = document.getElementById("hwaseungDoublePipeLogSlicerClear");
@@ -239,6 +243,17 @@
   const hwaseungDoublePipeLogProcessFilters = document.getElementById("hwaseungDoublePipeLogProcessFilters");
   const hwaseungDoublePipeLogKpiScopeEl = document.getElementById("hwaseungDoublePipeLogKpiScope");
   const viewMufflerLog = document.getElementById("viewMufflerLog");
+  const viewPlanVsActual = document.getElementById("viewPlanVsActual");
+  const planVsActualTeamsHost = document.getElementById("planVsActualTeamsHost");
+  const planVsActualEmpty = document.getElementById("planVsActualEmpty");
+  const planVsActualFilterBar = document.getElementById("planVsActualFilterBar");
+  const planVsActualDateFrom = document.getElementById("planVsActualDateFrom");
+  const planVsActualDateTo = document.getElementById("planVsActualDateTo");
+  const planVsActualDateApply = document.getElementById("planVsActualDateApply");
+  const planVsActualDateReset = document.getElementById("planVsActualDateReset");
+  const planVsActualProcMode = document.getElementById("planVsActualProcMode");
+  const planVsActualProcField = document.getElementById("planVsActualProcField");
+  const planVsActualProcWrap = document.getElementById("planVsActualProcWrap");
   const viewStockUnitPrice = document.getElementById("viewStockUnitPrice");
   const stockUnitPriceFileInput = document.getElementById("stockUnitPriceFileInput");
   const stockUnitPriceDropzone = document.getElementById("stockUnitPriceDropzone");
@@ -277,6 +292,7 @@
   const drawingLogTablesWrap = document.getElementById("drawingLogTablesWrap");
   const drawingLogProdWrap = document.getElementById("drawingLogProdWrap");
   const drawingLogMaintWrap = document.getElementById("drawingLogMaintWrap");
+  const drawingLogDowntimeWrap = document.getElementById("drawingLogDowntimeWrap");
   const drawingLogOps = document.getElementById("drawingLogOps");
   const kpiDefectLabel = document.getElementById("kpiDefectLabel");
   const drawingLogTimeline = document.getElementById("drawingLogTimeline");
@@ -338,7 +354,7 @@
 
   /** @type {string} 드로잉팀 사이드 메뉴: "" 이면 타입 필터 미적용 */
   let drawingTeamSegment = "";
-  /** @type {'home' | 'upload' | 'teamProductionUpload' | 'daily' | 'orderCalendar' | 'stockTable' | 'simple' | 'summary' | 'drawingLog' | 'parallelLog' | 'doublePipeLog' | 'hwaseungDoublePipeLog' | 'mufflerLog' | 'stockUnitPrice'} */
+  /** @type {'home' | 'upload' | 'teamProductionUpload' | 'daily' | 'orderCalendar' | 'stockTable' | 'simple' | 'summary' | 'drawingLog' | 'parallelLog' | 'doublePipeLog' | 'hwaseungDoublePipeLog' | 'mufflerLog' | 'planVsActual' | 'stockUnitPrice'} */
   let currentView = "home";
 
   /** @type {null | ReturnType<typeof parseDrawingLogFromMatrix> & { sheetName: string; fileLabel: string; maintenance?: { fileLabel: string; failures: any[]; failSheets: string[]; pmRows: any[]; pmSheets: string[]; equipmentStats: any[] } | null }} */
@@ -358,6 +374,16 @@
    */
   /** @type {null | { fileLabel: string; maintenance?: { fileLabel: string; failures: any[]; failSheets: string[]; pmRows: any[]; pmSheets: string[]; equipmentStats: any[] } | null; segments: (ReturnType<typeof parseMufflerLogFromMatrix> & { sheetName: string })[] }} */
   let lastMufflerLog = null;
+  /** 계획대비 실적 — 날짜 열 집합이 바뀌면 필터 기본값을 다시 맞춤 */
+  let planVsActualDateFingerprint = "";
+  /** @type {{ teamKeys: Set<string>, procMode: 'all' | 'split', procPickByDef: Map<string, Set<string>>, lastDataFp: string }} */
+  const planVsActualFilterState = {
+    teamKeys: new Set(),
+    procMode: "all",
+    /** 공정별: defKey → 표시할 공정명 집합. 키 없음·빈 Set = 해당 팀 전 공정 */
+    procPickByDef: new Map(),
+    lastDataFp: "",
+  };
   /** @type {MufflerSegUiState[]} 시트별 타임라인·공정 필터 상태 */
   let mufflerLogSegStates = [];
 
@@ -451,6 +477,1060 @@
     stock: { options: [], selected: new Set() },
   };
 
+  function hideUploadStatusBanners() {
+    document.querySelectorAll(".upload-zone-card--ok").forEach((el) => el.classList.remove("upload-zone-card--ok"));
+    document.querySelectorAll(".upload-zone-card__status").forEach((el) => {
+      el.hidden = true;
+      el.textContent = "";
+      el.removeAttribute("title");
+    });
+  }
+
+  function clearTeamProdHubUploadMarks() {
+    document.querySelectorAll(".team-prod-hub__card--ok").forEach((el) => el.classList.remove("team-prod-hub__card--ok"));
+    document.querySelectorAll(".team-prod-hub__status").forEach((el) => {
+      el.hidden = true;
+      el.textContent = "";
+      el.removeAttribute("title");
+    });
+  }
+
+  /**
+   * 생산 엑셀 업로드 카드에만 초록 표식 (상단 배너 대신)
+   * @param {"drawing"|"parallel"|"muffler"|"doublePipe"|"hwaseung"} teamKey
+   * @param {string} fileName
+   */
+  function markTeamProdHubUploadOk(teamKey, fileName) {
+    const card = document.querySelector(`[data-team-prod="${teamKey}"]`);
+    if (!card) return;
+    card.classList.add("team-prod-hub__card--ok");
+    const s = card.querySelector(".team-prod-hub__status");
+    if (s) {
+      s.hidden = false;
+      s.textContent = "반영됨";
+      s.title = fileName;
+    }
+  }
+
+  /** @param {number | null | undefined} x */
+  function teamProdFiniteStop(x) {
+    const n = typeof x === "number" ? x : Number(x);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  /** @param {any} log */
+  function teamProdLogHasStopKindSplit(log) {
+    const n = Array.isArray(log?.iStopTimeCols) ? log.iStopTimeCols.length : 0;
+    return n === 4 || n === 5;
+  }
+
+  /**
+   * @param {"drawing"|"parallel"|"muffler"|"doublePipe"|"hwaseung"} teamKey
+   * @param {number} nKinds
+   */
+  function teamProdStopLabelsFor(teamKey, nKinds) {
+    if (teamKey === "hwaseung" && nKinds === 5) return [...HWASEUNG_STOP_LABELS];
+    if (teamKey === "doublePipe") return [...DOUBLE_PIPE_STOP_LABELS];
+    return [...DRAWING_STOP_KIND_LABELS];
+  }
+
+  /**
+   * @param {any} row
+   * @param {number} nKinds
+   */
+  function teamProdStopValuesFromRow(row, nKinds) {
+    const vals = [
+      teamProdFiniteStop(row.sumStopExchange),
+      teamProdFiniteStop(row.sumStopRepair),
+      teamProdFiniteStop(row.sumStopMaterial),
+      teamProdFiniteStop(row.sumStopPlanned),
+    ];
+    if (nKinds === 5) vals.push(teamProdFiniteStop(row.sumStopFifth));
+    return vals;
+  }
+
+  /** 교환·수리·소재·계획정지(+5열) — 팀 화면·허브 공통 */
+  const TEAM_PROD_PARETO_COLORS = ["#7b61ff", "#e53935", "#ffb020", "#5a677d", "#6366f1"];
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  /**
+   * @param {number[]} vals
+   * @param {string[]} colors
+   * @param {number} total
+   */
+  function teamProdConicGradientStops(vals, colors, total) {
+    if (total <= 0) return null;
+    let acc = 0;
+    const parts = [];
+    for (let i = 0; i < vals.length; i++) {
+      const p = (vals[i] / total) * 100;
+      if (p <= 0) continue;
+      const c = colors[i % colors.length];
+      const from = acc;
+      acc += p;
+      parts.push(`${c} ${from}% ${acc}%`);
+    }
+    return acc > 0 ? `conic-gradient(from -90deg, ${parts.join(", ")})` : null;
+  }
+
+  /**
+   * @param {{ i: number, v: number }[]} order sorted desc by v
+   * @param {string[]} labels
+   * @param {string[]} colors
+   * @param {number} denom
+   * @param {number} maxBar
+   */
+  function teamProdBuildParetoSvg(order, labels, colors, denom, maxBar) {
+    const svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("class", "team-prod-downtime-pareto-svg");
+    svg.setAttribute("viewBox", "0 0 360 92");
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    svg.setAttribute("role", "img");
+    const title = document.createElementNS(SVG_NS, "title");
+    title.textContent = "비가동 파레토: 막대는 유형별 금액, 꺾은선은 누적 비율";
+    svg.appendChild(title);
+
+    const chartW = 360;
+    const chartH = 92;
+    const pl = 4;
+    const pr = 28;
+    const pt = 6;
+    const pb = 22;
+    const innerW = chartW - pl - pr;
+    const innerH = chartH - pt - pb;
+    const m = order.length;
+    if (m === 0) return svg;
+
+    const scale = document.createElementNS(SVG_NS, "g");
+    scale.setAttribute("class", "team-prod-downtime-pareto-svg__axis");
+    for (const pct of [0, 50, 100]) {
+      const ty = chartH - pb - (pct / 100) * innerH;
+      const line = document.createElementNS(SVG_NS, "line");
+      line.setAttribute("x1", String(chartW - pr + 2));
+      line.setAttribute("x2", String(chartW - 2));
+      line.setAttribute("y1", String(ty));
+      line.setAttribute("y2", String(ty));
+      line.setAttribute("stroke", "#e2e8f0");
+      line.setAttribute("stroke-dasharray", "2 3");
+      scale.appendChild(line);
+      const num = document.createElementNS(SVG_NS, "text");
+      num.setAttribute("x", String(chartW - 1));
+      num.setAttribute("y", String(ty + 3));
+      num.setAttribute("text-anchor", "end");
+      num.setAttribute("class", "team-prod-downtime-pareto-svg__pct");
+      num.textContent = `${pct}%`;
+      scale.appendChild(num);
+    }
+    svg.appendChild(scale);
+
+    const barGap = 5;
+    const barW = Math.max(8, (innerW - barGap * Math.max(0, m - 1)) / m);
+    let cum = 0;
+    /** @type {string[]} */
+    const linePts = [];
+    /** @type {SVGElement[]} */
+    const catTexts = [];
+
+    for (let idx = 0; idx < m; idx++) {
+      const { i, v } = order[idx];
+      const x = pl + idx * (barW + barGap);
+      const bh = maxBar > 0 ? (v / maxBar) * innerH * 0.72 : 0;
+      const y0 = chartH - pb - bh;
+      const rect = document.createElementNS(SVG_NS, "rect");
+      rect.setAttribute("x", String(x));
+      rect.setAttribute("y", String(y0));
+      rect.setAttribute("width", String(barW));
+      rect.setAttribute("height", String(Math.max(0, bh)));
+      rect.setAttribute("rx", "3");
+      rect.setAttribute("fill", colors[i % colors.length]);
+      rect.setAttribute("opacity", "0.92");
+      svg.appendChild(rect);
+
+      cum += v;
+      const cx = x + barW / 2;
+      const cumFrac = denom > 0 ? cum / denom : 0;
+      const cy = chartH - pb - cumFrac * innerH;
+      linePts.push(`${cx},${cy}`);
+
+      const tlab = document.createElementNS(SVG_NS, "text");
+      tlab.setAttribute("x", String(x + barW / 2));
+      tlab.setAttribute("y", String(chartH - 4));
+      tlab.setAttribute("text-anchor", "middle");
+      tlab.setAttribute("class", "team-prod-downtime-pareto-svg__cat");
+      const short = (labels[i] || "").replace(/^비가동\(/, "").replace(/\)$/, "");
+      tlab.textContent = short.length > 5 ? short.slice(0, 4) + "…" : short;
+      catTexts.push(tlab);
+    }
+
+    if (linePts.length) {
+      const poly = document.createElementNS(SVG_NS, "polyline");
+      poly.setAttribute("fill", "none");
+      poly.setAttribute("stroke", "#0f172a");
+      poly.setAttribute("stroke-width", "1.75");
+      poly.setAttribute("stroke-linejoin", "round");
+      poly.setAttribute("points", linePts.join(" "));
+      poly.setAttribute("opacity", "0.85");
+      svg.appendChild(poly);
+      for (const pair of linePts) {
+        const [dx, dy] = pair.split(",").map(Number);
+        const c = document.createElementNS(SVG_NS, "circle");
+        c.setAttribute("cx", String(dx));
+        c.setAttribute("cy", String(dy));
+        c.setAttribute("r", "3");
+        c.setAttribute("fill", "#fff");
+        c.setAttribute("stroke", "#0f172a");
+        c.setAttribute("stroke-width", "1.25");
+        svg.appendChild(c);
+      }
+    }
+
+    for (const t of catTexts) svg.appendChild(t);
+
+    return svg;
+  }
+
+  /**
+   * @param {HTMLElement} parent
+   * @param {any} log
+   * @param {"drawing"|"parallel"|"muffler"|"doublePipe"|"hwaseung"} teamKey
+   * @returns {boolean}
+   */
+  function appendTeamLogDowntimeBody(parent, log, teamKey) {
+    if (!log || !teamProdLogHasStopKindSplit(log)) return false;
+    const nKinds = log.iStopTimeCols.length;
+    let labels = teamProdStopLabelsFor(teamKey, nKinds);
+    if (labels.length !== nKinds) labels = labels.slice(0, nKinds);
+
+    const globalVals = teamProdStopValuesFromRow(log, nKinds);
+    const totalAll = globalVals.reduce((a, b) => a + b, 0);
+
+    const monthsChrono = (log.monthlyStats || [])
+      .filter((m) => m && m.key && m.key !== "일자미상")
+      .sort((a, b) => String(a.key).localeCompare(String(b.key)));
+    const repairIdx = 1;
+    const repairLabel = labels[repairIdx] || "수리";
+    const repairsSeries = monthsChrono.map((m) => teamProdStopValuesFromRow(m, nKinds)[repairIdx]);
+    let repairSurge = false;
+    let repairSurgeDetail = "";
+    if (repairsSeries.length >= 2) {
+      const last = repairsSeries[repairsSeries.length - 1];
+      const prev = repairsSeries.slice(0, -1);
+      const baseline = prev.reduce((a, b) => a + b, 0) / prev.length;
+      const threshold = Math.max(baseline * 1.5, baseline > 0 ? baseline * 0.15 : 0, 1e-6);
+      if (last > threshold && last > baseline * 1.2) {
+        repairSurge = true;
+        const pct = baseline > 0 ? Math.round(((last - baseline) / baseline) * 100) : 100;
+        repairSurgeDetail = `최근 월 ${repairLabel}: ${Math.round(last).toLocaleString("ko-KR")} (이전 월 평균 대비 약 ${pct}%↑)`;
+      }
+    }
+    if (repairSurge) {
+      const al = document.createElement("div");
+      al.className = "team-prod-downtime-alert";
+      al.setAttribute("role", "status");
+      al.textContent = `급증 알람 · ${repairSurgeDetail} 예방보전·점검 일정을 검토해 보세요.`;
+      parent.appendChild(al);
+    }
+
+    const hPareto = document.createElement("h5");
+    hPareto.textContent = "도넛 비중 + 파레토 (막대·누적선)";
+    parent.appendChild(hPareto);
+
+    const order = [...globalVals.map((v, i) => ({ i, v }))]
+      .filter((x) => x.v > 0)
+      .sort((a, b) => b.v - a.v);
+    const denom = totalAll > 0 ? totalAll : 1;
+    const maxBar = order.length ? order[0].v : 1;
+
+    const vizTop = document.createElement("div");
+    vizTop.className = "team-prod-downtime-viztop";
+
+    if (order.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "team-prod-downtime-foot team-prod-downtime-foot--block";
+      empty.textContent = "집계된 비가동 합계가 0입니다. 엑셀 비가동 열 값을 확인해 주세요.";
+      vizTop.appendChild(empty);
+    } else {
+      const leftCol = document.createElement("div");
+      leftCol.className = "team-prod-downtime-viztop__donut-side";
+
+      const donutWrap = document.createElement("div");
+      donutWrap.className = "team-prod-downtime-donut";
+      const ring = document.createElement("div");
+      ring.className = "team-prod-downtime-donut__ring";
+      const grad = teamProdConicGradientStops(globalVals, TEAM_PROD_PARETO_COLORS, totalAll);
+      if (grad) ring.style.background = grad;
+      else ring.classList.add("team-prod-downtime-donut__ring--empty");
+      const hole = document.createElement("div");
+      hole.className = "team-prod-downtime-donut__hole";
+      const totalNum = document.createElement("span");
+      totalNum.className = "team-prod-downtime-donut__total-num";
+      totalNum.textContent = Math.round(totalAll).toLocaleString("ko-KR");
+      const totalLbl = document.createElement("span");
+      totalLbl.className = "team-prod-downtime-donut__total-lbl";
+      totalLbl.textContent = "비가동 합계";
+      hole.appendChild(totalNum);
+      hole.appendChild(totalLbl);
+      donutWrap.appendChild(ring);
+      donutWrap.appendChild(hole);
+      leftCol.appendChild(donutWrap);
+
+      const legend = document.createElement("div");
+      legend.className = "team-prod-downtime-legend";
+      for (let i = 0; i < nKinds; i++) {
+        const v = globalVals[i];
+        const rowL = document.createElement("div");
+        rowL.className = "team-prod-downtime-legend__row";
+        const sw = document.createElement("span");
+        sw.className = "team-prod-downtime-legend__swatch";
+        sw.style.background = TEAM_PROD_PARETO_COLORS[i % TEAM_PROD_PARETO_COLORS.length];
+        const nameEl = document.createElement("span");
+        nameEl.className = "team-prod-downtime-legend__name";
+        nameEl.textContent = labels[i] || `유형${i + 1}`;
+        const valEl = document.createElement("span");
+        valEl.className = "team-prod-downtime-legend__val";
+        const pct = totalAll > 0 ? Math.round((v / totalAll) * 100) : 0;
+        valEl.textContent = `${Math.round(v).toLocaleString("ko-KR")} · ${pct}%`;
+        rowL.appendChild(sw);
+        rowL.appendChild(nameEl);
+        rowL.appendChild(valEl);
+        legend.appendChild(rowL);
+      }
+      leftCol.appendChild(legend);
+
+      const rightCol = document.createElement("div");
+      rightCol.className = "team-prod-downtime-viztop__pareto-side";
+      const hintP = document.createElement("p");
+      hintP.className = "team-prod-downtime-viztop__hint";
+      hintP.textContent = "막대: 금액 큰 순 · 꺾은선: 누적 % (우측 0·50·100%)";
+      rightCol.appendChild(hintP);
+      rightCol.appendChild(teamProdBuildParetoSvg(order, labels, TEAM_PROD_PARETO_COLORS, denom, maxBar));
+
+      let cumR = 0;
+      const cumBox = document.createElement("div");
+      cumBox.className = "team-prod-downtime-pareto-legend";
+      for (const { i, v } of order) {
+        cumR += v;
+        const rowC = document.createElement("div");
+        rowC.className = "team-prod-downtime-pareto-legend__row";
+        const dot = document.createElement("span");
+        dot.className = "team-prod-downtime-pareto-legend__dot";
+        dot.style.background = TEAM_PROD_PARETO_COLORS[i % TEAM_PROD_PARETO_COLORS.length];
+        const t1 = document.createElement("span");
+        t1.className = "team-prod-downtime-pareto-legend__kind";
+        t1.textContent = labels[i] || `유형${i + 1}`;
+        const t2 = document.createElement("span");
+        t2.className = "team-prod-downtime-pareto-legend__amt";
+        t2.textContent = Math.round(v).toLocaleString("ko-KR");
+        const t3 = document.createElement("span");
+        t3.className = "team-prod-downtime-pareto-legend__cum";
+        t3.textContent = `누적 ${Math.round((cumR / denom) * 100)}%`;
+        rowC.appendChild(dot);
+        rowC.appendChild(t1);
+        rowC.appendChild(t2);
+        rowC.appendChild(t3);
+        cumBox.appendChild(rowC);
+      }
+      rightCol.appendChild(cumBox);
+
+      vizTop.appendChild(leftCol);
+      vizTop.appendChild(rightCol);
+    }
+    parent.appendChild(vizTop);
+
+    const hTr = document.createElement("h5");
+    hTr.textContent = `월별 ${repairLabel} 트렌드 (고장·다운타임 경향 참고)`;
+    parent.appendChild(hTr);
+
+    const trend = document.createElement("div");
+    trend.className = "team-prod-downtime-trend";
+    const tVals = monthsChrono.map((m) => teamProdStopValuesFromRow(m, nKinds)[repairIdx]);
+    const tMax = tVals.length ? Math.max(...tVals, 1) : 1;
+    for (let k = 0; k < monthsChrono.length; k++) {
+      const col = document.createElement("div");
+      col.className = "team-prod-downtime-trend__col";
+      const bar = document.createElement("div");
+      bar.className = "team-prod-downtime-trend__bar";
+      const hPct = (tVals[k] / tMax) * 100;
+      bar.style.height = `${Math.max(4, hPct)}%`;
+      bar.title = `${monthsChrono[k].label}: ${Math.round(tVals[k]).toLocaleString("ko-KR")}`;
+      const lab = document.createElement("span");
+      lab.className = "team-prod-downtime-trend__lab";
+      lab.textContent = monthsChrono[k].label.replace(/\s*년\s*/, ".").replace(/\s*월\s*/, "");
+      col.appendChild(bar);
+      col.appendChild(lab);
+      trend.appendChild(col);
+    }
+    if (monthsChrono.length === 0) {
+      const p = document.createElement("p");
+      p.className = "team-prod-downtime-foot";
+      p.textContent = "월별 집계할 작업일자가 없습니다.";
+      parent.appendChild(p);
+    } else {
+      parent.appendChild(trend);
+    }
+
+    const foot = document.createElement("p");
+    foot.className = "team-prod-downtime-foot";
+    foot.textContent =
+      "트렌드·알람은 월 단위 합계를 기준으로 한 참고 지표입니다. 급증은 최근 1개월이 그 이전 월 평균보다 충분히 클 때만 표시됩니다.";
+    parent.appendChild(foot);
+
+    return true;
+  }
+
+  /** @param {any} st */
+  function logVizDefectPctForBar(st) {
+    if (!st) return NaN;
+    if (Number.isFinite(st.defectAvg)) return Math.min(100, Math.max(0, st.defectAvg));
+    if (Number.isFinite(st.sumProdQty) && st.sumProdQty > 0 && Number.isFinite(st.sumDefectQty)) {
+      return Math.min(100, Math.max(0, (st.sumDefectQty / st.sumProdQty) * 100));
+    }
+    return NaN;
+  }
+
+  /**
+   * @param {any[]} rows
+   * @param {"month"|"equipment"} [vizMode]
+   */
+  function logVizSortRows(rows, vizMode) {
+    return [...rows].filter((r) => r).sort((a, b) => {
+      if (vizMode === "equipment") {
+        return compareDrawingEquipmentKeys(String(a.key ?? ""), String(b.key ?? ""));
+      }
+      if (a.key === "일자미상") return 1;
+      if (b.key === "일자미상") return -1;
+      return String(a.key).localeCompare(String(b.key));
+    });
+  }
+
+  /** @param {HTMLElement} filterBar */
+  function logVizSelectedColKeys(filterBar) {
+    const s = new Set();
+    if (!filterBar) return s;
+    filterBar.querySelectorAll('input[type="checkbox"][data-log-col]:checked').forEach((el) => {
+      const k = el.getAttribute("data-log-col");
+      if (k) s.add(k);
+    });
+    return s;
+  }
+
+  /** @param {HTMLElement} tableBlock */
+  function logVizTheadColMeta(tableBlock) {
+    const ths = tableBlock.querySelectorAll("thead th[data-log-col]");
+    /** @type {{ key: string, head: string }[]} */
+    const out = [];
+    ths.forEach((th) => {
+      const key = th.dataset.logCol;
+      if (!key || key === "row") return;
+      out.push({ key, head: String(th.textContent || "").trim() });
+    });
+    return out;
+  }
+
+  /** @param {HTMLElement} tableBlock @param {Set<string>} visible */
+  function logVizApplyTableColumnVisibility(tableBlock, visible) {
+    tableBlock.querySelectorAll("[data-log-col]").forEach((el) => {
+      const c = el.dataset.logCol;
+      if (c === "row") {
+        el.classList.remove("drawing-log-col--hidden");
+        return;
+      }
+      if (visible.has(c)) el.classList.remove("drawing-log-col--hidden");
+      else el.classList.add("drawing-log-col--hidden");
+    });
+  }
+
+  /** @param {HTMLElement} tableBlock @param {HTMLElement} filterBar */
+  function logVizPopulateFilterBarFromThead(tableBlock, filterBar) {
+    filterBar.innerHTML = "";
+    const track = document.createElement("div");
+    track.className = "log-viz-filter-bar__track";
+
+    const mkChip = (text, attrs, checked) => {
+      const lab = document.createElement("label");
+      lab.className = "log-viz-filter-chip";
+      const inp = document.createElement("input");
+      inp.type = "checkbox";
+      inp.checked = !!checked;
+      Object.entries(attrs || {}).forEach(([k, v]) => inp.setAttribute(k, String(v)));
+      lab.appendChild(inp);
+      lab.appendChild(document.createTextNode(` ${text}`));
+      return lab;
+    };
+
+    track.appendChild(mkChip("전체 선택", { "data-log-select-all": "1" }, true));
+    track.appendChild(mkChip("표 표시", { "data-log-toggle": "table" }, true));
+    track.appendChild(mkChip("가시화 표시", { "data-log-toggle": "viz" }, true));
+
+    const meta = logVizTheadColMeta(tableBlock);
+    for (const { key, head } of meta) {
+      track.appendChild(mkChip(head, { "data-log-col": key, "data-log-head": head }, true));
+    }
+    filterBar.appendChild(track);
+    logVizSyncSelectAllChip(filterBar);
+  }
+
+  /** @param {HTMLElement} filterBar */
+  function logVizSyncSelectAllChip(filterBar) {
+    if (!filterBar) return;
+    const master = filterBar.querySelector('input[type="checkbox"][data-log-select-all="1"]');
+    if (!master) return;
+    const cols = [...filterBar.querySelectorAll('input[type="checkbox"][data-log-col]')];
+    if (!cols.length) {
+      master.checked = false;
+      master.indeterminate = false;
+      return;
+    }
+    const nOn = cols.filter((x) => x.checked).length;
+    master.indeterminate = nOn > 0 && nOn < cols.length;
+    master.checked = nOn === cols.length;
+  }
+
+  /** @param {HTMLElement} filterBar @param {boolean} checked */
+  function logVizSetAllColumnsChecked(filterBar, checked) {
+    if (!filterBar) return;
+    filterBar.querySelectorAll('input[type="checkbox"][data-log-col]').forEach((el) => {
+      el.checked = !!checked;
+    });
+    logVizSyncSelectAllChip(filterBar);
+  }
+
+  /** @param {HTMLElement} filterBar @param {"table"|"viz"} key */
+  function logVizToggleChecked(filterBar, key) {
+    const el = filterBar && filterBar.querySelector(`input[type="checkbox"][data-log-toggle="${key}"]`);
+    return !!(el && el.checked);
+  }
+
+  /** @param {any} st @param {string} key */
+  function logVizNumericForKey(st, key) {
+    if (!st) return NaN;
+    switch (key) {
+      case "count": {
+        const n = typeof st.dataRows === "number" ? st.dataRows : Number(st.dataRows);
+        return Number.isFinite(n) ? n : NaN;
+      }
+      case "util":
+        return st.utilAvg;
+      case "oee":
+        return st.oeeAvg;
+      case "defectRate":
+        return logVizDefectPctForBar(st);
+      case "prodQty":
+        return st.sumProdQty;
+      case "defectQty":
+        return st.sumDefectQty;
+      case "workTime":
+        return st.sumWorkTime;
+      case "stopEx":
+        return teamProdFiniteStop(st.sumStopExchange);
+      case "stopRep":
+        return teamProdFiniteStop(st.sumStopRepair);
+      case "stopMat":
+        return teamProdFiniteStop(st.sumStopMaterial);
+      case "stopPlan":
+        return teamProdFiniteStop(st.sumStopPlanned);
+      case "stopFifth":
+        return teamProdFiniteStop(st.sumStopFifth);
+      case "stopTotal":
+        return teamProdFiniteStop(st.sumStopTime);
+      default:
+        return NaN;
+    }
+  }
+
+  /** @param {string} key */
+  function logVizBarColorForKey(key) {
+    if (key === "count") return "#475569";
+    if (key === "util") return "#0369a1";
+    if (key === "oee") return "#6d28d9";
+    if (key === "defectRate") return "#c2410c";
+    if (key === "prodQty") return "#047857";
+    if (key === "defectQty") return "#ea580c";
+    if (key === "workTime") return "#0f766e";
+    if (key === "stopEx") return TEAM_PROD_PARETO_COLORS[0];
+    if (key === "stopRep") return TEAM_PROD_PARETO_COLORS[1];
+    if (key === "stopMat") return TEAM_PROD_PARETO_COLORS[2];
+    if (key === "stopPlan") return TEAM_PROD_PARETO_COLORS[3];
+    if (key === "stopFifth") return TEAM_PROD_PARETO_COLORS[4];
+    if (key === "stopTotal") return "#334155";
+    return "#64748b";
+  }
+
+  /**
+   * @param {number} widthPct 0~100
+   * @param {string} color
+   * @param {string} [title]
+   */
+  function logVizBuildKpiBarOuter(widthPct, color, title) {
+    const barOuter = document.createElement("div");
+    barOuter.className = "log-viz-datarow__bar-outer log-viz-datarow__bar-outer--kpi";
+    const barInner = document.createElement("div");
+    barInner.className = "log-viz-datarow__bar-inner";
+    const w = Number.isFinite(widthPct) ? Math.min(100, Math.max(0, widthPct)) : 0;
+    barInner.style.width = `${w > 0 ? Math.max(w, 0.6) : 0}%`;
+    barInner.style.background = color;
+    if (title) barOuter.title = title;
+    barOuter.appendChild(barInner);
+    return barOuter;
+  }
+
+  /** @param {any} st @param {string} key @param {string} head */
+  function logVizCellTextForKey(st, key, head) {
+    const q = (v) => (Number.isFinite(v) ? formatQty(v) : "—");
+    switch (key) {
+      case "count":
+        return `${head} ${String(st.dataRows ?? "—")}`;
+      case "util":
+        return `${head} ${Number.isFinite(st.utilAvg) ? formatPercent(st.utilAvg) : "—"}`;
+      case "oee":
+        return `${head} ${Number.isFinite(st.oeeAvg) ? formatPercent(st.oeeAvg) : "—"}`;
+      case "defectRate":
+        return `${head} ${formatDrawingDefectRateCell(st)}`;
+      case "prodQty":
+        return `${head} ${q(st.sumProdQty)}`;
+      case "defectQty":
+        return `${head} ${q(st.sumDefectQty)}`;
+      case "workTime":
+        return `${head} ${q(st.sumWorkTime)}`;
+      case "stopEx":
+        return `${head} ${q(st.sumStopExchange)}`;
+      case "stopRep":
+        return `${head} ${q(st.sumStopRepair)}`;
+      case "stopMat":
+        return `${head} ${q(st.sumStopMaterial)}`;
+      case "stopPlan":
+        return `${head} ${q(st.sumStopPlanned)}`;
+      case "stopFifth":
+        return `${head} ${q(st.sumStopFifth)}`;
+      case "stopTotal":
+        return `${head} ${q(st.sumStopTime)}`;
+      default:
+        return `${head} —`;
+    }
+  }
+
+  /** 표 시각화: 비가동 분해 열은 한 막대에 스택 */
+  const LOG_VIZ_STOP_COL_KEYS = new Set(["stopEx", "stopRep", "stopMat", "stopPlan", "stopFifth", "stopTotal"]);
+
+  /**
+   * 작업일자 필터 시 피벗 월/일 행(생산수량 표와 동일 소스)
+   * @param {any} sub
+   * @param {string} gran "month"|"day"
+   * @param {Set<string>} selMonths
+   * @param {Set<string>} selDays
+   */
+  function collectPivotRowsForBreakdownTable(sub, gran, selMonths, selDays) {
+    if (!sub) return [];
+    if (gran === "month" && selMonths && selMonths.size > 0) {
+      const pool = sub.pivotMonthlyStats || [];
+      const out = [];
+      for (const ym of [...selMonths].sort()) {
+        const st = pool.find((x) => x && x.key === ym);
+        if (st) out.push(st);
+      }
+      return out;
+    }
+    if (gran === "day" && selDays && selDays.size > 0) {
+      const pool = sub.pivotDailyStats || [];
+      const out = [];
+      for (const dk of [...selDays].sort()) {
+        const st = pool.find((x) => x && x.key === dk);
+        if (st) out.push(st);
+      }
+      return out;
+    }
+    return [];
+  }
+
+  /**
+   * @param {HTMLElement} viz
+   */
+  function logVizRefreshFromState(viz) {
+    const st = viz && viz.__logVizState;
+    if (!st) return;
+    const { innerHost, filterBar, tableBlock, rows, mode } = st;
+    innerHost.innerHTML = "";
+
+    const tableWrap = tableBlock.querySelector(".drawing-log-preview-wrap");
+    if (tableWrap) tableWrap.hidden = !logVizToggleChecked(filterBar, "table");
+    viz.hidden = !logVizToggleChecked(filterBar, "viz");
+
+    const visible = logVizSelectedColKeys(filterBar);
+    logVizSyncSelectAllChip(filterBar);
+    logVizApplyTableColumnVisibility(tableBlock, visible);
+
+    if (viz.hidden) return;
+
+    const colMeta = logVizTheadColMeta(tableBlock).filter((m) => visible.has(m.key));
+    if (colMeta.length === 0) {
+      return;
+    }
+
+    const stopMeta = colMeta.filter((m) => LOG_VIZ_STOP_COL_KEYS.has(m.key));
+    const otherMeta = colMeta.filter((m) => !LOG_VIZ_STOP_COL_KEYS.has(m.key));
+
+    const sorted = logVizSortRows(rows, mode);
+    /** @type {Record<string, number>} */
+    const maxBy = {};
+    for (const { key } of otherMeta) {
+      let mx = 0;
+      for (const r of sorted) {
+        const v = logVizNumericForKey(r, key);
+        if (Number.isFinite(v) && v > mx) mx = v;
+      }
+      maxBy[key] = key === "count" ? Math.max(1, mx) : mx > 0 ? mx : 1;
+    }
+
+    let maxStopSum = 1;
+    if (stopMeta.length) {
+      for (const r of sorted) {
+        let s = 0;
+        for (const { key } of stopMeta) {
+          const v = logVizNumericForKey(r, key);
+          if (Number.isFinite(v) && v > 0) s += v;
+        }
+        if (s > maxStopSum) maxStopSum = s;
+      }
+      if (maxStopSum <= 0) maxStopSum = 1;
+    }
+
+    const pctKeys = new Set(["util", "oee", "defectRate"]);
+
+    const grid = document.createElement("div");
+    grid.className = "log-viz-datarow-grid";
+
+    for (const row of sorted) {
+      const rowEl = document.createElement("div");
+      rowEl.className = "log-viz-datarow log-viz-datarow--filtered";
+      const lab = document.createElement("span");
+      lab.className = "log-viz-datarow__label";
+      lab.textContent = String(row.label ?? row.key ?? "");
+      lab.title = String(row.label ?? row.key ?? "");
+
+      const barsCol = document.createElement("div");
+      barsCol.className = "log-viz-datarow__bars";
+
+      const valCol = document.createElement("div");
+      valCol.className = "log-viz-datarow__vals";
+
+      if (stopMeta.length) {
+        let rowSum = 0;
+        for (const { key } of stopMeta) {
+          const v = logVizNumericForKey(row, key);
+          if (Number.isFinite(v) && v > 0) rowSum += v;
+        }
+        const barOuter = document.createElement("div");
+        barOuter.className = "log-viz-datarow__bar-outer log-viz-datarow__bar-outer--stopstack";
+        if (rowSum <= 0) {
+          const innerEmpty = document.createElement("div");
+          innerEmpty.className = "log-viz-datarow__stack log-viz-datarow__stack--empty";
+          innerEmpty.style.width = "100%";
+          barOuter.appendChild(innerEmpty);
+        } else {
+          const wPct = (rowSum / maxStopSum) * 100;
+          const wrap = document.createElement("div");
+          wrap.className = "log-viz-stopstack-outer";
+          wrap.style.width = `${wPct > 0 ? Math.max(wPct, 0.6) : 0}%`;
+          const stack = document.createElement("div");
+          stack.className = "log-viz-datarow__stack";
+          const stackTitleParts = [];
+          for (const { key, head } of stopMeta) {
+            const v = logVizNumericForKey(row, key);
+            if (Number.isFinite(v) && v > 0) stackTitleParts.push(logVizCellTextForKey(row, key, head));
+          }
+          barOuter.title = stackTitleParts.join(" · ");
+          for (const { key, head } of stopMeta) {
+            const v = logVizNumericForKey(row, key);
+            const nv = Number.isFinite(v) && v > 0 ? v : 0;
+            if (nv <= 0) continue;
+            const seg = document.createElement("div");
+            seg.className = "log-viz-datarow__seg";
+            seg.style.flex = `${Math.max(0.04, nv)} 1 0`;
+            seg.style.background = logVizBarColorForKey(key);
+            seg.title = logVizCellTextForKey(row, key, head);
+            stack.appendChild(seg);
+          }
+          wrap.appendChild(stack);
+          barOuter.appendChild(wrap);
+        }
+        barsCol.appendChild(barOuter);
+      }
+
+      if (otherMeta.length) {
+        const otherWrap = document.createElement("div");
+        otherWrap.className = "log-viz-other-bars" + (stopMeta.length ? " log-viz-other-bars--after-stack" : "");
+        for (const { key, head } of otherMeta) {
+          const v = logVizNumericForKey(row, key);
+          const color = logVizBarColorForKey(key);
+          let w = 0;
+          if (pctKeys.has(key)) {
+            w = Number.isFinite(v) ? Math.min(100, Math.max(0, v)) : 0;
+          } else if (Number.isFinite(v) && maxBy[key] > 0) {
+            w = (v / maxBy[key]) * 100;
+          }
+          const rowBar = document.createElement("div");
+          rowBar.className = "log-viz-metric-bar-row";
+          rowBar.appendChild(logVizBuildKpiBarOuter(w, color, logVizCellTextForKey(row, key, head)));
+          otherWrap.appendChild(rowBar);
+        }
+        barsCol.appendChild(otherWrap);
+      }
+
+      for (const { key, head } of colMeta) {
+        const sp = document.createElement("span");
+        sp.textContent = logVizCellTextForKey(row, key, head);
+        valCol.appendChild(sp);
+      }
+
+      rowEl.appendChild(lab);
+      rowEl.appendChild(barsCol);
+      rowEl.appendChild(valCol);
+      grid.appendChild(rowEl);
+    }
+
+    if (mode === "equipment") {
+      const sc = document.createElement("div");
+      sc.className = "log-viz-eqhost log-viz-eqhost--in-viz";
+      sc.appendChild(grid);
+      innerHost.appendChild(sc);
+    } else {
+      innerHost.appendChild(grid);
+    }
+  }
+
+  /**
+   * 월·설비 표 블록: 표 thead와 동일한 열 체크 + 표 위 시각화
+   * @param {HTMLElement} tableBlock
+   * @param {any[]} rows
+   * @param {"month"|"equipment"} mode
+   * @param {any} logRef
+   * @param {"drawing"|"parallel"|"muffler"|"doublePipe"|"hwaseung"} teamKey
+   */
+  function appendStopKindVizToTableBlock(tableBlock, rows, mode, logRef, teamKey) {
+    if (!tableBlock || !rows || !rows.length || !logRef) return;
+    const wrap = tableBlock.querySelector(".drawing-log-preview-wrap");
+    if (!wrap) return;
+
+    const caption = document.createElement("p");
+    caption.className = "drawing-log-table-caption";
+    caption.textContent =
+      mode === "month"
+        ? "아래 표와 같은 열을 고르면 표와 막대가 같이 바뀝니다. 비가동(교환·수리 등)은 위쪽 한 줄에 색으로 겹쳐 보이고, 나머지는 줄마다 가로 막대입니다."
+        : "아래 표와 같은 열을 고르면 표와 막대가 같이 바뀝니다. 비가동 분해는 위쪽 한 줄 스택, 나머지는 줄마다 가로 막대입니다.";
+    tableBlock.insertBefore(caption, wrap);
+
+    const filterBar = document.createElement("div");
+    filterBar.className = "log-viz-filter-bar";
+    filterBar.setAttribute("role", "group");
+    filterBar.setAttribute("aria-label", "표 열 표시");
+    logVizPopulateFilterBarFromThead(tableBlock, filterBar);
+    tableBlock.insertBefore(filterBar, wrap);
+
+    const viz = document.createElement("div");
+    viz.className = "drawing-log-table-viz";
+    const innerHost = document.createElement("div");
+    innerHost.className = "log-viz-filtered-body";
+    viz.appendChild(innerHost);
+    tableBlock.insertBefore(viz, wrap);
+
+    viz.__logVizState = {
+      tableBlock,
+      innerHost,
+      filterBar,
+      rows,
+      mode,
+      logRef,
+      teamKey,
+    };
+    filterBar.addEventListener("change", (ev) => {
+      const t = ev.target;
+      if (!(t instanceof HTMLInputElement)) return;
+      if (t.matches('input[type="checkbox"][data-log-select-all="1"]')) {
+        logVizSetAllColumnsChecked(filterBar, !!t.checked);
+      } else if (t.matches('input[type="checkbox"][data-log-col]')) {
+        logVizSyncSelectAllChip(filterBar);
+      }
+      logVizRefreshFromState(viz);
+    });
+
+    logVizRefreshFromState(viz);
+  }
+
+  /**
+   * 필터·KPI와 동일한 집계로 비가동 차트용 log 모델
+   * @param {any} baseLog
+   * @param {any} ksrc
+   * @param {any|null} sub
+   */
+  function mergeLogModelForDowntimeViz(baseLog, ksrc, sub) {
+    if (!baseLog || !ksrc) return null;
+    const monthlyStats =
+      sub != null && Array.isArray(sub.pivotMonthlyStats) ? sub.pivotMonthlyStats : baseLog.monthlyStats;
+    const equipmentStats =
+      sub != null && Array.isArray(sub.equipmentStats) ? sub.equipmentStats : baseLog.equipmentStats;
+    return {
+      ...baseLog,
+      ...ksrc,
+      monthlyStats: monthlyStats || [],
+      equipmentStats: equipmentStats || [],
+      fileLabel: baseLog.fileLabel,
+    };
+  }
+
+  /** @param {HTMLElement} inner */
+  function appendDowntimeChartIntro(inner) {
+    const ht = document.createElement("h3");
+    ht.className = "drawing-log-downtime__title";
+    ht.textContent = "③ 비가동 분석 (도넛 + 파레토)";
+    inner.appendChild(ht);
+    const sub = document.createElement("p");
+    sub.className = "drawing-log-downtime__sub";
+    sub.textContent =
+      "KPI와 맞춘 전체 비가동(도넛·파레토·설비 상위·월별 수리 트렌드)입니다. 월·설비·공정 표의 시각화는 각 표 블록 바로 위에 붙어 있으며, 칩으로 지표를 고를 수 있습니다.";
+    inner.appendChild(sub);
+  }
+
+  function renderDrawingLogDowntimeSection() {
+    if (!drawingLogDowntimeWrap) return;
+    drawingLogDowntimeWrap.innerHTML = "";
+    if (!lastDrawingLog) {
+      drawingLogDowntimeWrap.hidden = true;
+      return;
+    }
+    const sub = reaggregateDrawingLogFiltered();
+    const model = mergeLogModelForDowntimeViz(lastDrawingLog, getDrawingLogKpiSource(), sub);
+    if (!model || !teamProdLogHasStopKindSplit(model)) {
+      drawingLogDowntimeWrap.hidden = true;
+      return;
+    }
+    const inner = document.createElement("div");
+    inner.className = "drawing-log-downtime";
+    appendDowntimeChartIntro(inner);
+    appendTeamLogDowntimeBody(inner, model, "drawing");
+    drawingLogDowntimeWrap.appendChild(inner);
+    drawingLogDowntimeWrap.hidden = false;
+  }
+
+  function renderParallelLogDowntimeSection() {
+    if (!parallelLogDowntimeWrap) return;
+    parallelLogDowntimeWrap.innerHTML = "";
+    if (!lastParallelLog) {
+      parallelLogDowntimeWrap.hidden = true;
+      return;
+    }
+    const sub = reaggregateParallelLogFiltered();
+    const model = mergeLogModelForDowntimeViz(lastParallelLog, getParallelLogKpiSource(), sub);
+    if (!model || !teamProdLogHasStopKindSplit(model)) {
+      parallelLogDowntimeWrap.hidden = true;
+      return;
+    }
+    const inner = document.createElement("div");
+    inner.className = "drawing-log-downtime";
+    appendDowntimeChartIntro(inner);
+    appendTeamLogDowntimeBody(inner, model, "parallel");
+    parallelLogDowntimeWrap.appendChild(inner);
+    parallelLogDowntimeWrap.hidden = false;
+  }
+
+  function renderDoublePipeLogDowntimeSection() {
+    if (!doublePipeLogDowntimeWrap) return;
+    doublePipeLogDowntimeWrap.innerHTML = "";
+    if (!lastDoublePipeLog) {
+      doublePipeLogDowntimeWrap.hidden = true;
+      return;
+    }
+    const sub = reaggregateDoublePipeLogFiltered();
+    const model = mergeLogModelForDowntimeViz(lastDoublePipeLog, getDoublePipeLogKpiSource(), sub);
+    if (!model || !teamProdLogHasStopKindSplit(model)) {
+      doublePipeLogDowntimeWrap.hidden = true;
+      return;
+    }
+    const inner = document.createElement("div");
+    inner.className = "drawing-log-downtime";
+    appendDowntimeChartIntro(inner);
+    appendTeamLogDowntimeBody(inner, model, "doublePipe");
+    doublePipeLogDowntimeWrap.appendChild(inner);
+    doublePipeLogDowntimeWrap.hidden = false;
+  }
+
+  function renderHwaseungDoublePipeLogDowntimeSection() {
+    if (!hwaseungDoublePipeLogDowntimeWrap) return;
+    hwaseungDoublePipeLogDowntimeWrap.innerHTML = "";
+    if (!lastHwaseungDoublePipeLog) {
+      hwaseungDoublePipeLogDowntimeWrap.hidden = true;
+      return;
+    }
+    const sub = reaggregateHwaseungDoublePipeLogFiltered();
+    const model = mergeLogModelForDowntimeViz(lastHwaseungDoublePipeLog, getHwaseungDoublePipeLogKpiSource(), sub);
+    if (!model || !teamProdLogHasStopKindSplit(model)) {
+      hwaseungDoublePipeLogDowntimeWrap.hidden = true;
+      return;
+    }
+    const inner = document.createElement("div");
+    inner.className = "drawing-log-downtime";
+    appendDowntimeChartIntro(inner);
+    appendTeamLogDowntimeBody(inner, model, "hwaseung");
+    hwaseungDoublePipeLogDowntimeWrap.appendChild(inner);
+    hwaseungDoublePipeLogDowntimeWrap.hidden = false;
+  }
+
+  /**
+   * @param {HTMLElement} segRoot
+   * @param {number} segIdx
+   */
+  function renderMufflerSegmentDowntimeSection(segRoot, segIdx) {
+    const host = segRoot.querySelector(".muffler-log-seg-downtime");
+    if (!host) return;
+    host.innerHTML = "";
+    const log = mufflerSegmentLog(segIdx);
+    if (!log) {
+      host.hidden = true;
+      return;
+    }
+    const sub = reaggregateMufflerLogFiltered(segIdx);
+    const model = mergeLogModelForDowntimeViz(log, getMufflerLogKpiSource(segIdx), sub);
+    if (!model || !teamProdLogHasStopKindSplit(model)) {
+      host.hidden = true;
+      return;
+    }
+    const inner = document.createElement("div");
+    inner.className = "drawing-log-downtime";
+    appendDowntimeChartIntro(inner);
+    appendTeamLogDowntimeBody(inner, { ...model, fileLabel: lastMufflerLog?.fileLabel || log.fileLabel }, "muffler");
+    host.appendChild(inner);
+    host.hidden = false;
+  }
+
+  function flashOrderBoardUploadOk() {
+    if (!lastBoard) return;
+    const card = document.querySelector('[data-upload-zone="order"]');
+    if (!card) return;
+    const prods = lastBoard.products;
+    const n = Array.isArray(prods) ? prods.length : prods instanceof Map ? prods.size : 0;
+    card.classList.add("upload-zone-card--ok");
+    const s = card.querySelector(".upload-zone-card__status");
+    if (s) {
+      s.hidden = false;
+      s.textContent = "반영됨";
+      s.title = `${lastFileName || "파일"} · 품목 ${n}건`;
+    }
+  }
+
+  /**
+   * @param {string} fileLabel
+   */
+  function flashStockUploadOk(fileLabel) {
+    const card = document.querySelector('[data-upload-zone="stock"]');
+    if (!card) return;
+    card.classList.add("upload-zone-card--ok");
+    const s = card.querySelector(".upload-zone-card__status");
+    if (s) {
+      s.hidden = false;
+      s.textContent = "반영됨";
+      s.title = fileLabel;
+    }
+  }
+
   function updateNavActiveState() {
     navItems.forEach((btn) => {
       const v = btn.dataset.view;
@@ -483,9 +1563,19 @@
     }
   }
 
+  function applySidebarCollapsed(collapsed) {
+    document.body.classList.toggle("app-body--sidebar-collapsed", !!collapsed);
+    if (!btnSidebarToggle) return;
+    btnSidebarToggle.setAttribute("aria-pressed", collapsed ? "true" : "false");
+    btnSidebarToggle.textContent = collapsed ? "▶" : "◀";
+    const nextAction = collapsed ? "사이드바 펼치기" : "사이드바 숨기기";
+    btnSidebarToggle.title = nextAction;
+    btnSidebarToggle.setAttribute("aria-label", nextAction);
+  }
+
   /**
    * 일별 통합표 ↔ 날짜별 발주 달력에서 동일한 필터 바를 공유합니다.
-   * @param {'home' | 'upload' | 'teamProductionUpload' | 'daily' | 'orderCalendar' | 'stockTable' | 'simple' | 'summary' | 'drawingLog' | 'parallelLog' | 'doublePipeLog' | 'hwaseungDoublePipeLog' | 'mufflerLog' | 'stockUnitPrice'} viewKey
+   * @param {'home' | 'upload' | 'teamProductionUpload' | 'daily' | 'orderCalendar' | 'stockTable' | 'simple' | 'summary' | 'drawingLog' | 'parallelLog' | 'doublePipeLog' | 'hwaseungDoublePipeLog' | 'mufflerLog' | 'planVsActual' | 'stockUnitPrice'} viewKey
    */
   function mountDailyFiltersForView(viewKey) {
     if (!dailyFilters || !dailyFiltersSlotDaily || !dailyFiltersSlotCalendar) return;
@@ -497,7 +1587,7 @@
   }
 
   /**
-   * @param {'home' | 'upload' | 'teamProductionUpload' | 'daily' | 'orderCalendar' | 'stockTable' | 'simple' | 'summary' | 'drawingLog' | 'parallelLog' | 'doublePipeLog' | 'hwaseungDoublePipeLog' | 'mufflerLog' | 'stockUnitPrice'} viewKey
+   * @param {'home' | 'upload' | 'teamProductionUpload' | 'daily' | 'orderCalendar' | 'stockTable' | 'simple' | 'summary' | 'drawingLog' | 'parallelLog' | 'doublePipeLog' | 'hwaseungDoublePipeLog' | 'mufflerLog' | 'planVsActual' | 'stockUnitPrice'} viewKey
    * @param {{ teamSegment?: string }} [opts] 일별 통합표·날짜별 달력에서만 `teamSegment`로 드로잉팀 구간 적용
    */
   function setView(viewKey, opts) {
@@ -521,6 +1611,7 @@
     if (viewDoublePipeLog) viewDoublePipeLog.hidden = viewKey !== "doublePipeLog";
     if (viewHwaseungDoublePipeLog) viewHwaseungDoublePipeLog.hidden = viewKey !== "hwaseungDoublePipeLog";
     if (viewMufflerLog) viewMufflerLog.hidden = viewKey !== "mufflerLog";
+    if (viewPlanVsActual) viewPlanVsActual.hidden = viewKey !== "planVsActual";
     if (viewStockUnitPrice) viewStockUnitPrice.hidden = viewKey !== "stockUnitPrice";
     if (mainWrap) mainWrap.classList.toggle("main-wrap--home", viewKey === "home");
     if (kmStripEl) kmStripEl.hidden = viewKey === "home";
@@ -550,8 +1641,9 @@
     else if (v === "hwaseungDoublePipeLog") renderHwaseungDoublePipeLogPanel();
     else if (v === "mufflerLog") renderMufflerLogPanel();
     else if (v === "teamProductionUpload") {
-      /* 허브: 별도 렌더 없음 */
+      /* 비가동 블록은 setView에서 갱신 */
     } else if (v === "stockUnitPrice") renderStockUnitPricePanel();
+    else if (v === "planVsActual") renderPlanVsActualPanel();
     else if (v === "stockTable") renderStockTableView();
     else if (lastBoard && (v === "daily" || v === "simple")) {
       renderBoard(lastBoard);
@@ -562,6 +1654,8 @@
   }
 
   function clearOutputs() {
+    hideUploadStatusBanners();
+    clearTeamProdHubUploadMarks();
     lastBoard = null;
     lastWorkbook = null;
     lastStockData = null;
@@ -606,6 +1700,12 @@
     clearStockTableView();
     resetStockTableFilters();
     if (mappingBlock) mappingBlock.hidden = true;
+    planVsActualDateFingerprint = "";
+    planVsActualFilterState.lastDataFp = "";
+    planVsActualFilterState.procPickByDef = new Map();
+    planVsActualFilterState.teamKeys = new Set();
+    planVsActualFilterState.procMode = "all";
+    if (currentView === "planVsActual") renderPlanVsActualPanel();
   }
 
   function onDataReady() {
@@ -701,10 +1801,21 @@
     allRow.className = "picker-option";
     const allCb = document.createElement("input");
     allCb.type = "checkbox";
-    allCb.checked = st.selected.size === st.options.length && st.options.length > 0;
-    allCb.indeterminate = st.selected.size > 0 && st.selected.size < st.options.length;
+    if (q) {
+      const allFilteredOn =
+        filtered.length > 0 && filtered.every((v) => st.selected.has(v));
+      const someFilteredOn = filtered.some((v) => st.selected.has(v));
+      allCb.checked = allFilteredOn;
+      allCb.indeterminate = !allFilteredOn && someFilteredOn;
+    } else {
+      allCb.checked = st.selected.size === st.options.length && st.options.length > 0;
+      allCb.indeterminate = st.selected.size > 0 && st.selected.size < st.options.length;
+    }
     allCb.addEventListener("change", () => {
-      if (allCb.checked) st.selected = new Set(st.options);
+      if (allCb.checked) {
+        if (q) st.selected = new Set(filtered);
+        else st.selected = new Set(st.options);
+      } else if (q) filtered.forEach((v) => st.selected.delete(v));
       else st.selected.clear();
       renderPickerList(key);
       updatePickerButton(key);
@@ -714,12 +1825,14 @@
       }
     });
     const allTx = document.createElement("span");
-    allTx.textContent = "전체";
+    allTx.textContent = q ? "전체(검색 목록)" : "전체";
+    if (q) allRow.title = "검색으로 보이는 항목만 모두 선택합니다. (엑셀 필터와 같이 좁힙니다.)";
     allRow.appendChild(allCb);
     allRow.appendChild(allTx);
     st.list.appendChild(allRow);
 
     if (filtered.length === 0) {
+      allCb.disabled = true;
       const em = document.createElement("div");
       em.className = "picker-empty";
       em.textContent = "검색 결과 없음";
@@ -1127,22 +2240,35 @@
     allRow.className = "picker-option";
     const allCb = document.createElement("input");
     allCb.type = "checkbox";
-    allCb.checked = st.selected.size === st.options.length && st.options.length > 0;
-    allCb.indeterminate = st.selected.size > 0 && st.selected.size < st.options.length;
+    if (q) {
+      const allFilteredOn =
+        filtered.length > 0 && filtered.every((v) => st.selected.has(v));
+      const someFilteredOn = filtered.some((v) => st.selected.has(v));
+      allCb.checked = allFilteredOn;
+      allCb.indeterminate = !allFilteredOn && someFilteredOn;
+    } else {
+      allCb.checked = st.selected.size === st.options.length && st.options.length > 0;
+      allCb.indeterminate = st.selected.size > 0 && st.selected.size < st.options.length;
+    }
     allCb.addEventListener("change", () => {
-      if (allCb.checked) st.selected = new Set(st.options);
+      if (allCb.checked) {
+        if (q) st.selected = new Set(filtered);
+        else st.selected = new Set(st.options);
+      } else if (q) filtered.forEach((v) => st.selected.delete(v));
       else st.selected.clear();
       renderStockUnitPriceCodePickerList();
       updateStockUnitPriceCodeFilterButton();
       renderStockUnitPricePreviewTable();
     });
     const allTx = document.createElement("span");
-    allTx.textContent = "전체";
+    allTx.textContent = q ? "전체(검색 목록)" : "전체";
+    if (q) allRow.title = "검색으로 보이는 품목코드만 모두 선택합니다.";
     allRow.appendChild(allCb);
     allRow.appendChild(allTx);
     st.list.appendChild(allRow);
 
     if (filtered.length === 0) {
+      allCb.disabled = true;
       const em = document.createElement("div");
       em.className = "picker-empty";
       em.textContent = "검색 결과 없음";
@@ -1637,6 +2763,537 @@
       }
     }
     renderStockUnitPricePreviewTable();
+  }
+
+  function comparePlanVsActualDateKey(a, b) {
+    if (a === "일자미상") return 1;
+    if (b === "일자미상") return -1;
+    return String(a).localeCompare(String(b));
+  }
+
+  /** @param {string} a @param {string} b — YYYY-MM-DD */
+  function eachIsoDateInRangeInclusive(a, b) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(a) || !/^\d{4}-\d{2}-\d{2}$/.test(b)) return [];
+    const lo = a <= b ? a : b;
+    const hi = a <= b ? b : a;
+    const out = [];
+    const cur = new Date(`${lo}T12:00:00`);
+    const end = new Date(`${hi}T12:00:00`);
+    while (cur <= end) {
+      const y = cur.getFullYear();
+      const m = String(cur.getMonth() + 1).padStart(2, "0");
+      const da = String(cur.getDate()).padStart(2, "0");
+      out.push(`${y}-${m}-${da}`);
+      cur.setDate(cur.getDate() + 1);
+    }
+    return out;
+  }
+
+  function planVsActualTodayYmd() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  /**
+   * @param {{ sumProdQty?: number | null, key: string }[]} dailyStats
+   * @returns {Map<string, number | null>}
+   */
+  function planVsActualMapFromDailyStats(dailyStats) {
+    const m = new Map();
+    for (const d of dailyStats || []) {
+      m.set(d.key, Number.isFinite(d.sumProdQty) ? d.sumProdQty : null);
+    }
+    return m;
+  }
+
+  function formatPlanVsActualCell(qty) {
+    if (qty === null || qty === undefined || !Number.isFinite(qty)) return "";
+    return Math.round(qty).toLocaleString("ko-KR");
+  }
+
+  function planVsActualDateHeaderLabel(dateKey) {
+    if (dateKey === "일자미상") return "일자미상";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return dateKey.slice(5);
+    return dateKey;
+  }
+
+  /**
+   * @returns {{ key: string, label: string, fileLabel: string, qtyByDateAll: Map<string, number | null>, processBlocks: null | { process: string, dailyStats: any[] }[] }[]}
+   */
+  function collectPlanVsActualTeamDefs() {
+    const defs = [];
+    if (lastDrawingLog) {
+      defs.push({
+        key: "drawing",
+        label: "드로잉",
+        fileLabel: lastDrawingLog.fileLabel || "",
+        qtyByDateAll: planVsActualMapFromDailyStats(lastDrawingLog.dailyStats),
+        processBlocks: null,
+      });
+    }
+    if (lastParallelLog) {
+      const pb = lastParallelLog.processBlocks && lastParallelLog.processBlocks.length ? lastParallelLog.processBlocks : null;
+      defs.push({
+        key: "parallel",
+        label: "페럴",
+        fileLabel: lastParallelLog.fileLabel || "",
+        qtyByDateAll: planVsActualMapFromDailyStats(lastParallelLog.dailyStats),
+        processBlocks: pb,
+      });
+    }
+    if (lastMufflerLog && lastMufflerLog.segments && lastMufflerLog.segments.length) {
+      lastMufflerLog.segments.forEach((seg, idx) => {
+        const sheetName = seg.sheetName || `시트${idx + 1}`;
+        const pb = seg.processBlocks && seg.processBlocks.length ? seg.processBlocks : null;
+        defs.push({
+          key: `muffler_${idx}`,
+          label: `머플러 · ${sheetName}`,
+          fileLabel: lastMufflerLog.fileLabel || "",
+          qtyByDateAll: planVsActualMapFromDailyStats(seg.dailyStats),
+          processBlocks: pb,
+        });
+      });
+    }
+    if (lastDoublePipeLog) {
+      const pb = lastDoublePipeLog.processBlocks && lastDoublePipeLog.processBlocks.length ? lastDoublePipeLog.processBlocks : null;
+      defs.push({
+        key: "doublePipe",
+        label: "이중관",
+        fileLabel: lastDoublePipeLog.fileLabel || "",
+        qtyByDateAll: planVsActualMapFromDailyStats(lastDoublePipeLog.dailyStats),
+        processBlocks: pb,
+      });
+    }
+    if (lastHwaseungDoublePipeLog) {
+      const pb =
+        lastHwaseungDoublePipeLog.processBlocks && lastHwaseungDoublePipeLog.processBlocks.length
+          ? lastHwaseungDoublePipeLog.processBlocks
+          : null;
+      defs.push({
+        key: "hwaseung",
+        label: "화승이중관",
+        fileLabel: lastHwaseungDoublePipeLog.fileLabel || "",
+        qtyByDateAll: planVsActualMapFromDailyStats(lastHwaseungDoublePipeLog.dailyStats),
+        processBlocks: pb,
+      });
+    }
+    return defs;
+  }
+
+  function collectPlanVsActualAllDateKeysFromDefs(teamDefs) {
+    const s = new Set();
+    for (const d of teamDefs) {
+      for (const k of d.qtyByDateAll.keys()) s.add(k);
+      if (d.processBlocks) {
+        for (const b of d.processBlocks) {
+          for (const st of b.dailyStats || []) s.add(st.key);
+        }
+      }
+    }
+    return [...s].sort(comparePlanVsActualDateKey);
+  }
+
+  function prunePlanVsActualProcPickByDef(teamDefs) {
+    const m = planVsActualFilterState.procPickByDef;
+    for (const defKey of [...m.keys()]) {
+      const def = teamDefs.find((d) => d.key === defKey);
+      if (!def || !def.processBlocks) {
+        m.delete(defKey);
+        continue;
+      }
+      const allowed = new Set(def.processBlocks.map((b) => b.process));
+      const s = m.get(defKey);
+      if (!s) {
+        m.delete(defKey);
+        continue;
+      }
+      for (const p of [...s]) if (!allowed.has(p)) s.delete(p);
+      if (s.size === 0) m.delete(defKey);
+    }
+  }
+
+  function syncPlanVsActualFilterStateForNewData(dataFp, teamKeyList, teamDefs) {
+    if (dataFp !== planVsActualFilterState.lastDataFp) {
+      planVsActualFilterState.lastDataFp = dataFp;
+      planVsActualFilterState.teamKeys = new Set(teamKeyList);
+      planVsActualFilterState.procPickByDef = new Map();
+      planVsActualFilterState.procMode = "all";
+    } else {
+      for (const k of [...planVsActualFilterState.teamKeys]) {
+        if (!teamKeyList.includes(k)) planVsActualFilterState.teamKeys.delete(k);
+      }
+      if (!planVsActualFilterState.teamKeys.size) teamKeyList.forEach((k) => planVsActualFilterState.teamKeys.add(k));
+      prunePlanVsActualProcPickByDef(teamDefs);
+    }
+  }
+
+  /**
+   * @param {string} defKey
+   * @param {string} procName
+   */
+  function planVsActualProcIncludedForDef(defKey, procName) {
+    const m = planVsActualFilterState.procPickByDef;
+    if (!m.has(defKey)) return true;
+    const s = m.get(defKey);
+    if (!s || s.size === 0) return true;
+    return s.has(procName);
+  }
+
+  /**
+   * 드로잉 → 페럴 → 머플러(시트별) → 이중관 → 화승이중관
+   * @param {{ key: string, label: string, fileLabel: string, qtyByDateAll: Map<string, number | null>, processBlocks: null | { process: string, dailyStats: any[] }[] }[]} teamDefs
+   */
+  function mountPlanVsActualTeamAndProcessPanel(teamDefs) {
+    if (!planVsActualProcWrap) return;
+    planVsActualProcWrap.innerHTML = "";
+    const split = planVsActualFilterState.procMode === "split";
+
+    /**
+     * @param {string} title
+     * @param {string} teamCbLabel
+     * @param {string[]} defKeys 단일 팀이면 ['drawing'], 머플러 그룹이면 muffler_* 전부
+     * @param {{ key: string, label: string, processBlocks: any }[]} defsForProcs 공정 칩용 (시트별)
+     */
+    const appendTeamBlock = (title, teamCbLabel, defKeys, defsForProcs) => {
+      if (!defKeys.length) return;
+      const block = document.createElement("div");
+      block.className = "plan-vs-proc-block";
+
+      const head = document.createElement("div");
+      head.className = "plan-vs-proc-block__head";
+
+      const labTeam = document.createElement("label");
+      labTeam.className = "plan-vs-chip plan-vs-chip--team";
+      const inpTeam = document.createElement("input");
+      inpTeam.type = "checkbox";
+      inpTeam.dataset.planTeamBlock = defKeys.join(",");
+      const allOn = defKeys.every((k) => planVsActualFilterState.teamKeys.has(k));
+      inpTeam.checked = allOn;
+      const spTeam = document.createElement("span");
+      spTeam.textContent = `${title} · ${teamCbLabel}`;
+      labTeam.appendChild(inpTeam);
+      labTeam.appendChild(spTeam);
+      head.appendChild(labTeam);
+      block.appendChild(head);
+
+      if (split && defsForProcs.length) {
+        const tail = document.createElement("div");
+        tail.className = "plan-vs-proc-block__tail";
+        for (const def of defsForProcs) {
+          if (!def.processBlocks || !def.processBlocks.length) continue;
+          const sub = document.createElement("div");
+          sub.className = "plan-vs-proc-block__sub";
+          const cap = document.createElement("div");
+          cap.className = "plan-vs-proc-block__caption";
+          cap.textContent = def.label;
+          sub.appendChild(cap);
+          const chips = document.createElement("div");
+          chips.className = "plan-vs-chiplist";
+          const seen = new Set();
+          const procNames = [];
+          for (const b of def.processBlocks) {
+            if (seen.has(b.process)) continue;
+            seen.add(b.process);
+            procNames.push(b.process);
+          }
+          procNames.sort((a, b) => String(a).localeCompare(String(b), "ko"));
+          for (const pk of procNames) {
+            const lab = document.createElement("label");
+            lab.className = "plan-vs-chip";
+            const inp = document.createElement("input");
+            inp.type = "checkbox";
+            inp.dataset.defKey = def.key;
+            inp.dataset.procName = pk;
+            const inc = planVsActualProcIncludedForDef(def.key, pk);
+            inp.checked = inc;
+            const sp = document.createElement("span");
+            sp.textContent = pk;
+            lab.appendChild(inp);
+            lab.appendChild(sp);
+            chips.appendChild(lab);
+          }
+          sub.appendChild(chips);
+          tail.appendChild(sub);
+        }
+        if (tail.childElementCount) block.appendChild(tail);
+      }
+
+      planVsActualProcWrap.appendChild(block);
+    };
+
+    const dDrawing = teamDefs.find((d) => d.key === "drawing");
+    if (dDrawing) appendTeamBlock("드로잉", "표시", ["drawing"], [dDrawing]);
+
+    const dPar = teamDefs.find((d) => d.key === "parallel");
+    if (dPar) appendTeamBlock("페럴", "표시", ["parallel"], [dPar]);
+
+    const mufflers = teamDefs.filter((d) => d.key.startsWith("muffler_"));
+    if (mufflers.length) {
+      const keys = mufflers.map((d) => d.key);
+      const block = document.createElement("div");
+      block.className = "plan-vs-proc-block";
+      const head = document.createElement("div");
+      head.className = "plan-vs-proc-block__head";
+      const labTeam = document.createElement("label");
+      labTeam.className = "plan-vs-chip plan-vs-chip--team";
+      const inpTeam = document.createElement("input");
+      inpTeam.type = "checkbox";
+      inpTeam.dataset.planTeamBlock = keys.join(",");
+      inpTeam.checked = keys.every((k) => planVsActualFilterState.teamKeys.has(k));
+      const spTeam = document.createElement("span");
+      spTeam.textContent = "머플러 · 표시(시트 전체)";
+      labTeam.appendChild(inpTeam);
+      labTeam.appendChild(spTeam);
+      head.appendChild(labTeam);
+      block.appendChild(head);
+      if (split) {
+        const tail = document.createElement("div");
+        tail.className = "plan-vs-proc-block__tail";
+        for (const def of mufflers) {
+          if (!def.processBlocks || !def.processBlocks.length) continue;
+          const sub = document.createElement("div");
+          sub.className = "plan-vs-proc-block__sub";
+          const cap = document.createElement("div");
+          cap.className = "plan-vs-proc-block__caption";
+          cap.textContent = def.label.replace(/^머플러 · /, "");
+          sub.appendChild(cap);
+          const chips = document.createElement("div");
+          chips.className = "plan-vs-chiplist";
+          const seen = new Set();
+          const procNames = [];
+          for (const b of def.processBlocks) {
+            if (seen.has(b.process)) continue;
+            seen.add(b.process);
+            procNames.push(b.process);
+          }
+          procNames.sort((a, b) => String(a).localeCompare(String(b), "ko"));
+          for (const pk of procNames) {
+            const lab = document.createElement("label");
+            lab.className = "plan-vs-chip";
+            const inp = document.createElement("input");
+            inp.type = "checkbox";
+            inp.dataset.defKey = def.key;
+            inp.dataset.procName = pk;
+            inp.checked = planVsActualProcIncludedForDef(def.key, pk);
+            const sp = document.createElement("span");
+            sp.textContent = pk;
+            lab.appendChild(inp);
+            lab.appendChild(sp);
+            chips.appendChild(lab);
+          }
+          sub.appendChild(chips);
+          tail.appendChild(sub);
+        }
+        if (tail.childElementCount) block.appendChild(tail);
+      }
+      planVsActualProcWrap.appendChild(block);
+    }
+
+    const dDp = teamDefs.find((d) => d.key === "doublePipe");
+    if (dDp) appendTeamBlock("이중관", "표시", ["doublePipe"], [dDp]);
+
+    const dHw = teamDefs.find((d) => d.key === "hwaseung");
+    if (dHw) appendTeamBlock("화승이중관", "표시", ["hwaseung"], [dHw]);
+  }
+
+  /**
+   * @param {{ key: string, label: string, fileLabel: string, qtyByDateAll: Map<string, number | null>, processBlocks: null | { process: string, dailyStats: any[] }[] }[]} teamDefs
+   */
+  function buildPlanVsActualDisplayRows(teamDefs) {
+    const active = teamDefs.filter((d) => planVsActualFilterState.teamKeys.has(d.key));
+    const mode = planVsActualFilterState.procMode;
+    /** @type {{ rowKey: string, label: string, fileLabel: string, qtyByDate: Map<string, number | null> }[]} */
+    const rows = [];
+    for (const def of active) {
+      const hasBlocks = def.processBlocks && def.processBlocks.length;
+      if (mode === "split" && hasBlocks) {
+        const seen = new Set();
+        for (const b of def.processBlocks) {
+          const pk = b.process;
+          if (seen.has(pk)) continue;
+          seen.add(pk);
+          if (!planVsActualProcIncludedForDef(def.key, pk)) continue;
+          rows.push({
+            rowKey: `${def.key}|${pk}`,
+            label: `${def.label} · ${pk}`,
+            fileLabel: def.fileLabel,
+            qtyByDate: planVsActualMapFromDailyStats(b.dailyStats),
+          });
+        }
+      } else {
+        rows.push({
+          rowKey: `${def.key}|ALL`,
+          label: def.label,
+          fileLabel: def.fileLabel,
+          qtyByDate: def.qtyByDateAll,
+        });
+      }
+    }
+    return rows;
+  }
+
+  function renderPlanVsActualPanel() {
+    if (!planVsActualTeamsHost) return;
+    planVsActualTeamsHost.innerHTML = "";
+    const teamDefs = collectPlanVsActualTeamDefs();
+    if (!teamDefs.length) {
+      if (planVsActualEmpty) planVsActualEmpty.hidden = false;
+      if (planVsActualFilterBar) planVsActualFilterBar.hidden = true;
+      return;
+    }
+    if (planVsActualEmpty) planVsActualEmpty.hidden = true;
+    if (planVsActualFilterBar) planVsActualFilterBar.hidden = false;
+
+    const allDates = collectPlanVsActualAllDateKeysFromDefs(teamDefs);
+    const isoDates = allDates.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d));
+    const dataFp = allDates.join("|");
+    const teamKeyList = teamDefs.map((d) => d.key);
+    syncPlanVsActualFilterStateForNewData(dataFp, teamKeyList, teamDefs);
+
+    if (planVsActualProcMode) planVsActualProcMode.value = planVsActualFilterState.procMode;
+    if (planVsActualProcField) {
+      planVsActualProcField.hidden = false;
+      mountPlanVsActualTeamAndProcessPanel(teamDefs);
+    }
+
+    const fp = dataFp;
+    if (fp !== planVsActualDateFingerprint) {
+      planVsActualDateFingerprint = fp;
+      if (planVsActualDateFrom && planVsActualDateTo) {
+        if (isoDates.length) {
+          planVsActualDateFrom.removeAttribute("max");
+          planVsActualDateTo.removeAttribute("max");
+          planVsActualDateFrom.value = planVsActualTodayYmd();
+          planVsActualDateTo.value = isoDates[isoDates.length - 1];
+        } else {
+          planVsActualDateFrom.value = "";
+          planVsActualDateTo.value = "";
+        }
+      }
+    }
+
+    const dataMin = isoDates.length ? isoDates[0] : "";
+    const dataMax = isoDates.length ? isoDates[isoDates.length - 1] : "";
+    const fromVal = planVsActualDateFrom && planVsActualDateFrom.value ? planVsActualDateFrom.value : "";
+    const toVal = planVsActualDateTo && planVsActualDateTo.value ? planVsActualDateTo.value : "";
+    const rangeStart = fromVal || dataMin;
+    const rangeEnd = toVal || dataMax;
+    const denseIso =
+      rangeStart && rangeEnd && /^\d{4}-\d{2}-\d{2}$/.test(rangeStart) && /^\d{4}-\d{2}-\d{2}$/.test(rangeEnd)
+        ? eachIsoDateInRangeInclusive(rangeStart, rangeEnd)
+        : [];
+    const visibleDates = denseIso.slice();
+
+    const displayRows = buildPlanVsActualDisplayRows(teamDefs);
+
+    const wrap = document.createElement("div");
+    wrap.className = "plan-vs-actual-table-wrap";
+    if (!visibleDates.length) {
+      const p = document.createElement("p");
+      p.className = "drawing-log-meta";
+      p.textContent = "표시할 날짜가 없습니다. 생산 데이터의 작업일자를 확인해 주세요.";
+      wrap.appendChild(p);
+      planVsActualTeamsHost.appendChild(wrap);
+      return;
+    }
+    if (!displayRows.length) {
+      const p = document.createElement("p");
+      p.className = "drawing-log-meta";
+      p.textContent = "표시할 팀이 없습니다. 팀을 하나 이상 선택해 주세요.";
+      wrap.appendChild(p);
+      planVsActualTeamsHost.appendChild(wrap);
+      return;
+    }
+
+    const tbl = document.createElement("table");
+    tbl.className = "board-table plan-vs-actual-matrix";
+
+    const thead = document.createElement("thead");
+    const trh = document.createElement("tr");
+    const thTeam = document.createElement("th");
+    thTeam.textContent = "팀 · 공정";
+    thTeam.className = "plan-vs-sticky-col plan-vs-sticky-col--name";
+    thTeam.setAttribute("scope", "col");
+    trh.appendChild(thTeam);
+    const thRowSum = document.createElement("th");
+    thRowSum.textContent = "합계";
+    thRowSum.className = "plan-vs-sticky-col plan-vs-sticky-col--sum num";
+    thRowSum.setAttribute("scope", "col");
+    thRowSum.title = "표에 보이는 날짜 열 합계";
+    trh.appendChild(thRowSum);
+    for (const dk of visibleDates) {
+      const th = document.createElement("th");
+      th.textContent = planVsActualDateHeaderLabel(dk);
+      th.title = dk;
+      th.className = "num";
+      trh.appendChild(th);
+    }
+    thead.appendChild(trh);
+    tbl.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    const colSums = visibleDates.map(() => 0);
+    const colHas = visibleDates.map(() => false);
+    for (const t of displayRows) {
+      const tr = document.createElement("tr");
+      const tdName = document.createElement("td");
+      tdName.textContent = t.label;
+      tdName.className = "plan-vs-sticky-col plan-vs-sticky-col--name";
+      if (t.fileLabel) tdName.title = `파일: ${t.fileLabel}`;
+      tdName.setAttribute("scope", "row");
+      tr.appendChild(tdName);
+      let rowSum = 0;
+      let rowHas = false;
+      visibleDates.forEach((dk, j) => {
+        const q = t.qtyByDate.has(dk) ? t.qtyByDate.get(dk) : null;
+        const td = document.createElement("td");
+        td.textContent = formatPlanVsActualCell(q);
+        td.className = "num";
+        if (Number.isFinite(q)) {
+          colSums[j] += q;
+          colHas[j] = true;
+          rowSum += q;
+          rowHas = true;
+        }
+        tr.appendChild(td);
+      });
+      const tdRowSum = document.createElement("td");
+      tdRowSum.className = "plan-vs-sticky-col plan-vs-sticky-col--sum num";
+      tdRowSum.textContent = rowHas ? Math.round(rowSum).toLocaleString("ko-KR") : "";
+      tr.insertBefore(tdRowSum, tr.children[1] || null);
+      tbody.appendChild(tr);
+    }
+
+    const trSum = document.createElement("tr");
+    const thSum = document.createElement("th");
+    thSum.textContent = "일별 합계";
+    thSum.className = "plan-vs-sticky-col plan-vs-sticky-col--name";
+    thSum.setAttribute("scope", "row");
+    trSum.appendChild(thSum);
+    const tdGrandRow = document.createElement("td");
+    tdGrandRow.className = "plan-vs-sticky-col plan-vs-sticky-col--sum num";
+    let grandTotal = 0;
+    let grandHas = false;
+    for (let j = 0; j < visibleDates.length; j++) {
+      if (colHas[j]) {
+        grandTotal += colSums[j];
+        grandHas = true;
+      }
+    }
+    tdGrandRow.textContent = grandHas ? Math.round(grandTotal).toLocaleString("ko-KR") : "";
+    tdGrandRow.title = "날짜 열 합계의 총합";
+    trSum.appendChild(tdGrandRow);
+    visibleDates.forEach((dk, j) => {
+      const td = document.createElement("td");
+      td.className = "num";
+      td.textContent = colHas[j] ? Math.round(colSums[j]).toLocaleString("ko-KR") : "";
+      trSum.appendChild(td);
+    });
+    tbody.appendChild(trSum);
+    tbl.appendChild(tbody);
+
+    wrap.appendChild(tbl);
+    planVsActualTeamsHost.appendChild(wrap);
   }
 
   /**
@@ -2587,15 +4244,84 @@
   }
 
   /**
+   * 보드 날짜 목록에서 해당 연·월의 마지막 일자(YYYY-MM-DD)
+   * @param {string[] | undefined} dates
+   * @param {number} y
+   * @param {number} mo 0–11
+   * @returns {string | null}
+   */
+  function boardDateLastInMonth(dates, y, mo) {
+    if (!dates || !dates.length) return null;
+    const p2 = (n) => String(n).padStart(2, "0");
+    const pref = `${y}-${p2(mo + 1)}-`;
+    let last = null;
+    for (const d of dates) {
+      if (typeof d === "string" && d.startsWith(pref)) {
+        if (!last || d > last) last = d;
+      }
+    }
+    return last;
+  }
+
+  /**
+   * 해당 연·월 안에서 「부족품」누적이 처음 0 미만이 되는 날짜(YYYY-MM-DD). 없으면 null.
+   * @param {string[] | undefined} dates
+   * @param {any} pack
+   * @param {number} y
+   * @param {number} mo 0–11
+   * @returns {string | null}
+   */
+  function firstNegativeLackYmdInMonth(dates, pack, y, mo) {
+    if (!dates || !dates.length) return null;
+    const lackLine = pack.rows.get("부족품");
+    if (!lackLine) return null;
+    const p2 = (n) => String(n).padStart(2, "0");
+    const pref = `${y}-${p2(mo + 1)}-`;
+    for (const d of dates) {
+      if (typeof d !== "string" || !d.startsWith(pref)) continue;
+      const v = parseNumber(lackLine.dates.get(d));
+      if (v < 0) return d;
+    }
+    return null;
+  }
+
+  /** @param {string} ymd */
+  function ymdToMonthDayShort(ymd) {
+    const p = String(ymd).split("-");
+    if (p.length !== 3) return ymd;
+    const mo = parseInt(p[1], 10);
+    const da = parseInt(p[2], 10);
+    if (!Number.isFinite(mo) || !Number.isFinite(da)) return ymd;
+    return `${mo}월 ${da}일`;
+  }
+
+  /**
+   * 재고 파일이 반영된 품목인지(재고 수치 또는 부족품 누적이 의미 있을 때) 달력·요약에 누적 잔여를 표시합니다.
+   * @param {any} pack
+   * @param {number} lackVal
+   */
+  function shouldShowOrderCalendarPackLack(pack, lackVal) {
+    if (!lastStockData) return false;
+    const orderLine = pack.rows.get("발주량");
+    const lackLine = pack.rows.get("부족품");
+    if (!orderLine || !lackLine) return false;
+    const stock = parseNumber(orderLine.stock);
+    const lackN = parseNumber(lackVal);
+    return stock !== 0 || lackN !== 0;
+  }
+
+  /**
    * 현재 달력 월(y, mo) 기준, 필터된 품목의 발주량 일별 합 → 제품별 합계 블록
    * @param {number} y
    * @param {number} mo 0–11
    * @param {ReturnType<typeof getFilteredProductPacks>} packs
+   * @param {NonNullable<typeof lastBoard> | null | undefined} board
    */
-  function renderOrderCalendarMonthSummary(y, mo, packs) {
+  function renderOrderCalendarMonthSummary(y, mo, packs, board) {
     if (!orderCalendarMonthSummary) return;
     const lastDate = new Date(y, mo + 1, 0).getDate();
-    /** @type {{ name: string, qty: number }[]} */
+    const lastYmdInData = board && board.dates ? boardDateLastInMonth(board.dates, y, mo) : null;
+    /** @type {{ name: string, qty: number, lackEnd: number | null, shortageYmd: string | null, lackAtFirstShort: number | null }[]} */
     const rows = [];
     for (const pack of packs) {
       const line = pack.rows.get("발주량");
@@ -2605,14 +4331,34 @@
         const ymd = formatYmd(new Date(y, mo, day));
         sum += parseNumber(line.dates.get(ymd));
       }
-      if (sum !== 0) rows.push({ name: pack.name, qty: sum });
+      if (sum === 0) continue;
+      let lackEnd = null;
+      let shortageYmd = null;
+      /** 첫 부족일 해당 날의 「부족품」값(달력 셀과 동일). 말일 누적 lackEnd와 다를 수 있음 */
+      let lackAtFirstShort = null;
+      if (lastStockData && lastYmdInData && board && board.dates) {
+        const lackLine = pack.rows.get("부족품");
+        if (lackLine) {
+          const lv = parseNumber(lackLine.dates.get(lastYmdInData));
+          if (shouldShowOrderCalendarPackLack(pack, lv)) {
+            lackEnd = lv;
+            if (lv < 0) {
+              shortageYmd = firstNegativeLackYmdInMonth(board.dates, pack, y, mo);
+              if (shortageYmd) lackAtFirstShort = parseNumber(lackLine.dates.get(shortageYmd));
+            }
+          }
+        }
+      }
+      rows.push({ name: pack.name, qty: sum, lackEnd, shortageYmd, lackAtFirstShort });
     }
     rows.sort((a, b) => a.name.localeCompare(b.name, "ko"));
 
     orderCalendarMonthSummary.innerHTML = "";
     const title = document.createElement("div");
     title.className = "order-calendar-month-summary__title";
-    title.textContent = `${y}년 ${mo + 1}월 제품별 발주량 합`;
+    title.textContent = lastStockData
+      ? `${y}년 ${mo + 1}월 제품별 발주·말잔·말일 누적(전월 발주 포함)`
+      : `${y}년 ${mo + 1}월 제품별 발주량 합`;
     orderCalendarMonthSummary.appendChild(title);
 
     const list = document.createElement("div");
@@ -2629,10 +4375,43 @@
         const ns = document.createElement("span");
         ns.className = "order-calendar-month-summary__name";
         ns.textContent = r.name;
+        const nums = document.createElement("div");
+        nums.className = "order-calendar-month-summary__nums";
         const qs = document.createElement("span");
         qs.className = "order-calendar-month-summary__qty";
-        qs.textContent = formatQty(r.qty);
-        row.append(ns, qs);
+        qs.textContent = `발주 ${formatQty(r.qty)}`;
+        nums.appendChild(qs);
+        if (r.lackEnd != null) {
+          const sep = document.createElement("span");
+          sep.className = "order-calendar-month-summary__sep";
+          sep.textContent = "·";
+          const lk = document.createElement("span");
+          lk.className = "order-calendar-month-summary__lack";
+          if (r.lackEnd < 0) {
+            lk.classList.add("order-calendar-month-summary__lack--short");
+            const tailYmd = lastYmdInData;
+            const dayLabel = tailYmd ? ymdToMonthDayShort(tailYmd) : "—";
+            const tailAmt = Math.abs(r.lackEnd);
+            lk.textContent = `${dayLabel}·${formatQty(tailAmt)}`;
+            const firstAmt =
+              r.shortageYmd != null && r.lackAtFirstShort != null && Number.isFinite(r.lackAtFirstShort)
+                ? Math.abs(r.lackAtFirstShort)
+                : null;
+            const tip = [
+              `이달 마지막 데이터일(${tailYmd || "—"}) 기준 누적 부족 ${formatQty(tailAmt)}(이전 달·이전 날짜 발주와 재고 반영 포함, 일별 통합표 「부족품」 말일)`,
+            ];
+            if (r.shortageYmd && firstAmt != null && tailYmd && r.shortageYmd !== tailYmd) {
+              tip.push(
+                `이달 첫 부족 ${r.shortageYmd}(${ymdToMonthDayShort(r.shortageYmd)}) 당시 ${formatQty(firstAmt)} — 달력 각 날짜와 동일`
+              );
+            }
+            lk.title = tip.join(" ");
+          } else {
+            lk.textContent = `말잔${formatQty(r.lackEnd)}`;
+          }
+          nums.append(sep, lk);
+        }
+        row.append(ns, nums);
         list.appendChild(row);
       }
     }
@@ -2641,7 +4420,7 @@
   }
 
   /**
-   * 일별 통합표와 동일 필터로 「발주량」만 월 달력 셀에 제품명·수량 표시
+   * 일별 통합표와 동일 필터로 「발주량」을 월 달력 셀에 표시하고, 재고 반영 시 「부족품」누적 잔여·부족을 함께 표시합니다.
    * @param {typeof lastBoard} board
    */
   function renderOrderCalendar(board) {
@@ -2691,7 +4470,7 @@
     today.setHours(0, 0, 0, 0);
     const todayYmd = formatYmd(today);
 
-    renderOrderCalendarMonthSummary(y, mo, packs);
+    renderOrderCalendarMonthSummary(y, mo, packs, board);
 
     orderCalendarGrid.innerHTML = "";
     orderCalendarGrid.className = "order-calendar-grid";
@@ -2727,7 +4506,14 @@
         const line = pack.rows.get("발주량");
         if (!line) continue;
         const v = parseNumber(line.dates.get(ymd));
-        if (v !== 0) items.push({ name: pack.name, qty: v });
+        if (v === 0) continue;
+        const lackLine = pack.rows.get("부족품");
+        let lackVal = null;
+        if (lastStockData && lackLine) {
+          const lv = parseNumber(lackLine.dates.get(ymd));
+          if (shouldShowOrderCalendarPackLack(pack, lv)) lackVal = lv;
+        }
+        items.push({ name: pack.name, qty: v, lackVal });
       }
       items.sort((a, b) => a.name.localeCompare(b.name, "ko"));
       if (items.length === 0) cell.classList.add("order-calendar-cell--empty");
@@ -2740,10 +4526,28 @@
         const ns = document.createElement("span");
         ns.className = "order-calendar-item-name";
         ns.textContent = it.name;
+        ns.title = it.name;
+        const nums = document.createElement("span");
+        nums.className = "order-calendar-item-nums";
         const qs = document.createElement("span");
         qs.className = "order-calendar-item-qty";
         qs.textContent = formatQty(it.qty);
-        row.append(ns, qs);
+        nums.appendChild(qs);
+        if (it.lackVal != null) {
+          const sep = document.createElement("span");
+          sep.className = "order-calendar-item-sep";
+          sep.textContent = "·";
+          const lk = document.createElement("span");
+          lk.className = "order-calendar-item-lack";
+          if (it.lackVal < 0) {
+            lk.classList.add("order-calendar-item-lack--short");
+            lk.textContent = `부${formatQty(Math.abs(it.lackVal))}`;
+          } else {
+            lk.textContent = `잔${formatQty(it.lackVal)}`;
+          }
+          nums.append(sep, lk);
+        }
+        row.append(ns, nums);
         list.appendChild(row);
       }
       cell.appendChild(list);
@@ -3288,22 +5092,35 @@
     allRow.className = "picker-option";
     const allCb = document.createElement("input");
     allCb.type = "checkbox";
-    allCb.checked = st.selected.size === st.options.length && st.options.length > 0;
-    allCb.indeterminate = st.selected.size > 0 && st.selected.size < st.options.length;
+    if (q) {
+      const allFilteredOn =
+        filtered.length > 0 && filtered.every((v) => st.selected.has(v));
+      const someFilteredOn = filtered.some((v) => st.selected.has(v));
+      allCb.checked = allFilteredOn;
+      allCb.indeterminate = !allFilteredOn && someFilteredOn;
+    } else {
+      allCb.checked = st.selected.size === st.options.length && st.options.length > 0;
+      allCb.indeterminate = st.selected.size > 0 && st.selected.size < st.options.length;
+    }
     allCb.addEventListener("change", () => {
-      if (allCb.checked) st.selected = new Set(st.options);
+      if (allCb.checked) {
+        if (q) st.selected = new Set(filtered);
+        else st.selected = new Set(st.options);
+      } else if (q) filtered.forEach((v) => st.selected.delete(v));
       else st.selected.clear();
       renderStockFilterList(key);
       updateStockFilterButton(key);
       renderStockTableView();
     });
     const allTx = document.createElement("span");
-    allTx.textContent = "전체";
+    allTx.textContent = q ? "전체(검색 목록)" : "전체";
+    if (q) allRow.title = "검색으로 보이는 항목만 모두 선택합니다.";
     allRow.appendChild(allCb);
     allRow.appendChild(allTx);
     listEl.appendChild(allRow);
 
     if (filtered.length === 0) {
+      allCb.disabled = true;
       const em = document.createElement("div");
       em.className = "picker-empty";
       em.textContent = "검색 결과 없음";
@@ -3764,7 +5581,9 @@
     for (const n of names) {
       const t = String(n).trim();
       const nt = norm(t);
-      if (t === "단조머플러" || (nt.includes("단조") && nt.includes("머플러"))) forgedSheet = forgedSheet || n;
+      if (t === "단조머플러" || nt === "단조머플러" || (nt.includes("단조") && nt.includes("머플"))) {
+        forgedSheet = forgedSheet || n;
+      }
     }
     if (!mufflerSheet) {
       for (const n of names) {
@@ -4062,26 +5881,39 @@
     };
   }
 
-  /** 설비 키에서 정렬용 숫자 추출 (1, 1호기, 호기 2 등) */
+  /** 설비 키에서 정렬용 숫자 추출 (1호기, 호기 2, 라인10 등 — 가능하면 호기 번호 우선) */
   function firstIntFromDrawingEqKey(s) {
     const t = String(s ?? "").trim();
+    if (!t) return NaN;
+    const mHo = t.match(/(\d+)\s*호\s*기?/);
+    if (mHo) return parseInt(mHo[1], 10);
     const m = t.match(/\d+/);
     return m ? parseInt(m[0], 10) : NaN;
   }
 
   /** 설비별 집계: 1·2·3… 호기 순, 미지정·전체는 맨 아래 */
   function compareDrawingEquipmentKeys(a, b) {
-    const tail = new Set(["미지정", "전체"]);
-    const aTail = tail.has(a);
-    const bTail = tail.has(b);
+    const aa = String(a ?? "").trim();
+    const bb = String(b ?? "").trim();
+    const tail = new Set(["미지정", "전체", "설비없음", "해당없음", "—", "-", "N/A", "n/a"]);
+    const aTail = tail.has(aa);
+    const bTail = tail.has(bb);
     if (aTail !== bTail) return aTail ? 1 : -1;
-    if (aTail && bTail) return a.localeCompare(b, "ko");
-    const na = firstIntFromDrawingEqKey(a);
-    const nb = firstIntFromDrawingEqKey(b);
+    if (aTail && bTail) return aa.localeCompare(bb, "ko");
+    const na = firstIntFromDrawingEqKey(aa);
+    const nb = firstIntFromDrawingEqKey(bb);
     if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb;
     if (Number.isFinite(na) && !Number.isFinite(nb)) return -1;
     if (!Number.isFinite(na) && Number.isFinite(nb)) return 1;
-    return a.localeCompare(b, "ko");
+    return aa.localeCompare(bb, "ko");
+  }
+
+  /** 설비별 집계 행을 호기 숫자 순으로(표·차트 공통) */
+  function sortEquipmentStatsByLineNo(stats) {
+    if (!Array.isArray(stats) || stats.length <= 1) return stats || [];
+    return [...stats].sort((a, b) =>
+      compareDrawingEquipmentKeys(String(a && a.key != null ? a.key : ""), String(b && b.key != null ? b.key : ""))
+    );
   }
 
   /**
@@ -5349,8 +7181,10 @@
 
   function getDrawingLogEquipmentStatsForTables() {
     const sub = reaggregateDrawingLogFiltered();
-    if (sub && Array.isArray(sub.equipmentStats)) return sub.equipmentStats;
-    return lastDrawingLog && lastDrawingLog.equipmentStats ? lastDrawingLog.equipmentStats : [];
+    if (sub && Array.isArray(sub.equipmentStats)) return sortEquipmentStatsByLineNo(sub.equipmentStats);
+    return sortEquipmentStatsByLineNo(
+      lastDrawingLog && lastDrawingLog.equipmentStats ? lastDrawingLog.equipmentStats : []
+    );
   }
 
   /**
@@ -5429,6 +7263,10 @@
       drawingLogMaintWrap.innerHTML = "";
       drawingLogMaintWrap.hidden = true;
     }
+    if (drawingLogDowntimeWrap) {
+      drawingLogDowntimeWrap.innerHTML = "";
+      drawingLogDowntimeWrap.hidden = true;
+    }
     resetDrawingLogSlicerState();
     if (drawingLogTimeline) drawingLogTimeline.hidden = true;
     if (drawingLogMonthStrip) drawingLogMonthStrip.innerHTML = "";
@@ -5463,6 +7301,10 @@
     if (parallelLogMaintWrap) {
       parallelLogMaintWrap.innerHTML = "";
       parallelLogMaintWrap.hidden = true;
+    }
+    if (parallelLogDowntimeWrap) {
+      parallelLogDowntimeWrap.innerHTML = "";
+      parallelLogDowntimeWrap.hidden = true;
     }
     parallelLogGranularity = "month";
     parallelLogSelectedMonths = new Set();
@@ -5508,6 +7350,10 @@
       doublePipeLogMaintWrap.innerHTML = "";
       doublePipeLogMaintWrap.hidden = true;
     }
+    if (doublePipeLogDowntimeWrap) {
+      doublePipeLogDowntimeWrap.innerHTML = "";
+      doublePipeLogDowntimeWrap.hidden = true;
+    }
     doublePipeLogGranularity = "month";
     doublePipeLogSelectedMonths = new Set();
     doublePipeLogSelectedDays = new Set();
@@ -5551,6 +7397,10 @@
     if (hwaseungDoublePipeLogMaintWrap) {
       hwaseungDoublePipeLogMaintWrap.innerHTML = "";
       hwaseungDoublePipeLogMaintWrap.hidden = true;
+    }
+    if (hwaseungDoublePipeLogDowntimeWrap) {
+      hwaseungDoublePipeLogDowntimeWrap.innerHTML = "";
+      hwaseungDoublePipeLogDowntimeWrap.hidden = true;
     }
     hwaseungDoublePipeLogGranularity = "month";
     hwaseungDoublePipeLogSelectedMonths = new Set();
@@ -5629,9 +7479,19 @@
       if (Array.isArray(stopKindLabels) && stopKindLabels.length >= 4) return stopKindLabels.slice(0, 4);
       return [...DRAWING_STOP_KIND_LABELS];
     })();
-    [...headBase, ...headStop].forEach((text) => {
+    const useFiveStop = splitStopByKind && Array.isArray(stopKindLabels) && stopKindLabels.length === 5;
+    /** @type {string[]} */
+    const colKeys = ["row", "count", "util", "oee", "defectRate", "prodQty", "defectQty", "workTime"];
+    if (splitStopByKind) {
+      if (useFiveStop) colKeys.push("stopEx", "stopRep", "stopMat", "stopPlan", "stopFifth");
+      else colKeys.push("stopEx", "stopRep", "stopMat", "stopPlan");
+    } else {
+      colKeys.push("stopTotal");
+    }
+    [...headBase, ...headStop].forEach((text, i) => {
       const th = document.createElement("th");
       th.textContent = text;
+      if (colKeys[i]) th.dataset.logCol = colKeys[i];
       trh.appendChild(th);
     });
     thead.appendChild(trh);
@@ -5651,8 +7511,7 @@
         fmtQtyCell(st.sumWorkTime),
       ];
       if (splitStopByKind) {
-        const useFive = Array.isArray(stopKindLabels) && stopKindLabels.length === 5;
-        if (useFive) {
+        if (useFiveStop) {
           cells.push(
             fmtQtyCell(st.sumStopExchange),
             fmtQtyCell(st.sumStopRepair),
@@ -5674,6 +7533,7 @@
       cells.forEach((text, i) => {
         const td = document.createElement("td");
         td.textContent = text;
+        if (colKeys[i]) td.dataset.logCol = colKeys[i];
         if (i > 0) td.classList.add("num");
         tr.appendChild(td);
       });
@@ -5690,7 +7550,22 @@
     drawingLogTablesWrap.innerHTML = "";
     const sub = reaggregateDrawingLogFiltered();
     const slicerActive = !!sub;
-    const months = slicerActive ? [] : lastDrawingLog.monthlyStats || [];
+    let monthTableTitle = "월별 집계";
+    let monthFirstCol = "월";
+    let months = lastDrawingLog.monthlyStats || [];
+    if (slicerActive && sub) {
+      const gran = drawingLogGranularity;
+      const hasSel =
+        (gran === "month" && drawingLogSelectedMonths.size > 0) ||
+        (gran === "day" && drawingLogSelectedDays.size > 0);
+      if (hasSel) {
+        months = collectPivotRowsForBreakdownTable(sub, gran, drawingLogSelectedMonths, drawingLogSelectedDays);
+        monthTableTitle = gran === "month" ? "선택 월 · 집계" : "선택 일 · 집계";
+        monthFirstCol = gran === "month" ? "월" : "일";
+      } else {
+        months = [];
+      }
+    }
     const eqs = getDrawingLogEquipmentStatsForTables();
     if (months.length === 0 && eqs.length === 0) {
       drawingLogTablesWrap.hidden = false;
@@ -5705,7 +7580,9 @@
     const splitStop =
       Array.isArray(lastDrawingLog.iStopTimeCols) && lastDrawingLog.iStopTimeCols.length >= 4;
     if (months.length) {
-      drawingLogTablesWrap.appendChild(buildDrawingBreakdownTable("월별 집계", "월", months, splitStop));
+      const monthBlock = buildDrawingBreakdownTable(monthTableTitle, monthFirstCol, months, splitStop);
+      drawingLogTablesWrap.appendChild(monthBlock);
+      appendStopKindVizToTableBlock(monthBlock, months, "month", lastDrawingLog, "drawing");
     }
     if (eqs.length) {
       let eqTitle = lastDrawingLog.hasEquipmentColumn ? "설비별 집계" : "설비별 집계 (설비 열 없음 · 전체)";
@@ -5716,7 +7593,9 @@
             : [...drawingLogSelectedDays].sort().join(", ");
         eqTitle += ` · 선택: ${hint}`;
       }
-      drawingLogTablesWrap.appendChild(buildDrawingBreakdownTable(eqTitle, "설비·구분", eqs, splitStop));
+      const eqBlock = buildDrawingBreakdownTable(eqTitle, "설비·구분", eqs, splitStop);
+      drawingLogTablesWrap.appendChild(eqBlock);
+      appendStopKindVizToTableBlock(eqBlock, eqs, "equipment", lastDrawingLog, "drawing");
     }
     drawingLogTablesWrap.hidden = false;
   }
@@ -6014,6 +7893,7 @@
     renderDrawingLogTimeline();
     renderDrawingLogTables();
     renderDrawingLogProductionQtyTable();
+    renderDrawingLogDowntimeSection();
     if (drawingLogMaintWrap) {
       if (lastDrawingLog.maintenance) {
         drawingLogMaintWrap.hidden = false;
@@ -6196,8 +8076,10 @@
 
   function getParallelLogEquipmentStatsForTables() {
     const sub = reaggregateParallelLogFiltered();
-    if (sub && Array.isArray(sub.equipmentStats)) return sub.equipmentStats;
-    return lastParallelLog && lastParallelLog.equipmentStats ? lastParallelLog.equipmentStats : [];
+    if (sub && Array.isArray(sub.equipmentStats)) return sortEquipmentStatsByLineNo(sub.equipmentStats);
+    return sortEquipmentStatsByLineNo(
+      lastParallelLog && lastParallelLog.equipmentStats ? lastParallelLog.equipmentStats : []
+    );
   }
 
   function renderParallelLogTables() {
@@ -6205,7 +8087,22 @@
     parallelLogTablesWrap.innerHTML = "";
     const sub = reaggregateParallelLogFiltered();
     const slicerActive = !!sub;
-    const months = slicerActive ? [] : lastParallelLog.monthlyStats || [];
+    let monthTableTitle = "월별 집계";
+    let monthFirstCol = "월";
+    let months = lastParallelLog.monthlyStats || [];
+    if (slicerActive && sub) {
+      const gran = parallelLogGranularity;
+      const hasSel =
+        (gran === "month" && parallelLogSelectedMonths.size > 0) ||
+        (gran === "day" && parallelLogSelectedDays.size > 0);
+      if (hasSel) {
+        months = collectPivotRowsForBreakdownTable(sub, gran, parallelLogSelectedMonths, parallelLogSelectedDays);
+        monthTableTitle = gran === "month" ? "선택 월 · 집계" : "선택 일 · 집계";
+        monthFirstCol = gran === "month" ? "월" : "일";
+      } else {
+        months = [];
+      }
+    }
     const eqs = getParallelLogEquipmentStatsForTables();
     const procBlocks =
       sub && Array.isArray(sub.processBlocks) ? sub.processBlocks : lastParallelLog.processBlocks || [];
@@ -6226,7 +8123,9 @@
       return;
     }
     if (months.length) {
-      parallelLogTablesWrap.appendChild(buildDrawingBreakdownTable("월별 집계", "월", months, splitStop));
+      const monthBlock = buildDrawingBreakdownTable(monthTableTitle, monthFirstCol, months, splitStop);
+      parallelLogTablesWrap.appendChild(monthBlock);
+      appendStopKindVizToTableBlock(monthBlock, months, "month", lastParallelLog, "parallel");
     }
     if (eqs.length) {
       let eqTitle = lastParallelLog.hasEquipmentColumn ? "설비별 집계" : "설비별 집계 (설비 열 없음 · 전체)";
@@ -6237,7 +8136,9 @@
             : [...parallelLogSelectedDays].sort().join(", ");
         eqTitle += ` · 선택: ${hint}`;
       }
-      parallelLogTablesWrap.appendChild(buildDrawingBreakdownTable(eqTitle, "설비·구분", eqs, splitStop));
+      const eqBlock = buildDrawingBreakdownTable(eqTitle, "설비·구분", eqs, splitStop);
+      parallelLogTablesWrap.appendChild(eqBlock);
+      appendStopKindVizToTableBlock(eqBlock, eqs, "equipment", lastParallelLog, "parallel");
     }
     for (const blk of procBlocks) {
       const m = blk.monthlyStats || [];
@@ -6249,7 +8150,11 @@
       h3.className = "drawing-log-block__title";
       h3.textContent = `공정 · ${blk.process}`;
       sec.appendChild(h3);
-      if (m.length) sec.appendChild(buildDrawingBreakdownTable("월별 집계", "월", m, splitStop));
+      if (m.length) {
+        const mb = buildDrawingBreakdownTable("월별 집계", "월", m, splitStop);
+        sec.appendChild(mb);
+        appendStopKindVizToTableBlock(mb, m, "month", lastParallelLog, "parallel");
+      }
       if (e.length) {
         let eqTitle = lastParallelLog.hasEquipmentColumn ? "설비별 집계" : "설비별 집계 (설비 열 없음 · 전체)";
         if (slicerActive) {
@@ -6259,7 +8164,9 @@
               : [...parallelLogSelectedDays].sort().join(", ");
           eqTitle += ` · 선택: ${hint}`;
         }
-        sec.appendChild(buildDrawingBreakdownTable(eqTitle, "설비·구분", e, splitStop));
+        const eb = buildDrawingBreakdownTable(eqTitle, "설비·구분", e, splitStop);
+        sec.appendChild(eb);
+        appendStopKindVizToTableBlock(eb, e, "equipment", lastParallelLog, "parallel");
       }
       parallelLogTablesWrap.appendChild(sec);
     }
@@ -6570,6 +8477,7 @@
     renderParallelLogTimeline();
     renderParallelLogTables();
     renderParallelLogProductionQtyTable();
+    renderParallelLogDowntimeSection();
     if (parallelLogMaintWrap) {
       if (lastParallelLog.maintenance) {
         parallelLogMaintWrap.hidden = false;
@@ -6741,8 +8649,10 @@
 
   function getDoublePipeLogEquipmentStatsForTables() {
     const sub = reaggregateDoublePipeLogFiltered();
-    if (sub && Array.isArray(sub.equipmentStats)) return sub.equipmentStats;
-    return lastDoublePipeLog && lastDoublePipeLog.equipmentStats ? lastDoublePipeLog.equipmentStats : [];
+    if (sub && Array.isArray(sub.equipmentStats)) return sortEquipmentStatsByLineNo(sub.equipmentStats);
+    return sortEquipmentStatsByLineNo(
+      lastDoublePipeLog && lastDoublePipeLog.equipmentStats ? lastDoublePipeLog.equipmentStats : []
+    );
   }
 
   function renderDoublePipeLogTables() {
@@ -6750,7 +8660,22 @@
     doublePipeLogTablesWrap.innerHTML = "";
     const sub = reaggregateDoublePipeLogFiltered();
     const slicerActive = !!sub;
-    const months = slicerActive ? [] : lastDoublePipeLog.monthlyStats || [];
+    let monthTableTitle = "월별 집계";
+    let monthFirstCol = "월";
+    let months = lastDoublePipeLog.monthlyStats || [];
+    if (slicerActive && sub) {
+      const gran = doublePipeLogGranularity;
+      const hasSel =
+        (gran === "month" && doublePipeLogSelectedMonths.size > 0) ||
+        (gran === "day" && doublePipeLogSelectedDays.size > 0);
+      if (hasSel) {
+        months = collectPivotRowsForBreakdownTable(sub, gran, doublePipeLogSelectedMonths, doublePipeLogSelectedDays);
+        monthTableTitle = gran === "month" ? "선택 월 · 집계" : "선택 일 · 집계";
+        monthFirstCol = gran === "month" ? "월" : "일";
+      } else {
+        months = [];
+      }
+    }
     const eqs = getDoublePipeLogEquipmentStatsForTables();
     const procBlocks =
       sub && Array.isArray(sub.processBlocks) ? sub.processBlocks : lastDoublePipeLog.processBlocks || [];
@@ -6772,9 +8697,9 @@
     }
     const stopLabels = splitStop ? DOUBLE_PIPE_STOP_LABELS : undefined;
     if (months.length) {
-      doublePipeLogTablesWrap.appendChild(
-        buildDrawingBreakdownTable("월별 집계", "월", months, splitStop, stopLabels)
-      );
+      const monthBlock = buildDrawingBreakdownTable(monthTableTitle, monthFirstCol, months, splitStop, stopLabels);
+      doublePipeLogTablesWrap.appendChild(monthBlock);
+      appendStopKindVizToTableBlock(monthBlock, months, "month", lastDoublePipeLog, "doublePipe");
     }
     if (eqs.length) {
       let eqTitle = lastDoublePipeLog.hasEquipmentColumn ? "설비별 집계" : "설비별 집계 (설비 열 없음 · 전체)";
@@ -6785,9 +8710,9 @@
             : [...doublePipeLogSelectedDays].sort().join(", ");
         eqTitle += ` · 선택: ${hint}`;
       }
-      doublePipeLogTablesWrap.appendChild(
-        buildDrawingBreakdownTable(eqTitle, "설비·구분", eqs, splitStop, stopLabels)
-      );
+      const eqBlock = buildDrawingBreakdownTable(eqTitle, "설비·구분", eqs, splitStop, stopLabels);
+      doublePipeLogTablesWrap.appendChild(eqBlock);
+      appendStopKindVizToTableBlock(eqBlock, eqs, "equipment", lastDoublePipeLog, "doublePipe");
     }
     for (const blk of procBlocks) {
       const m = blk.monthlyStats || [];
@@ -6799,7 +8724,11 @@
       h3.className = "drawing-log-block__title";
       h3.textContent = `공정 · ${blk.process}`;
       sec.appendChild(h3);
-      if (m.length) sec.appendChild(buildDrawingBreakdownTable("월별 집계", "월", m, splitStop, stopLabels));
+      if (m.length) {
+        const mb = buildDrawingBreakdownTable("월별 집계", "월", m, splitStop, stopLabels);
+        sec.appendChild(mb);
+        appendStopKindVizToTableBlock(mb, m, "month", lastDoublePipeLog, "doublePipe");
+      }
       if (e.length) {
         let eqTitle = lastDoublePipeLog.hasEquipmentColumn ? "설비별 집계" : "설비별 집계 (설비 열 없음 · 전체)";
         if (slicerActive) {
@@ -6809,7 +8738,9 @@
               : [...doublePipeLogSelectedDays].sort().join(", ");
           eqTitle += ` · 선택: ${hint}`;
         }
-        sec.appendChild(buildDrawingBreakdownTable(eqTitle, "설비·구분", e, splitStop, stopLabels));
+        const eb = buildDrawingBreakdownTable(eqTitle, "설비·구분", e, splitStop, stopLabels);
+        sec.appendChild(eb);
+        appendStopKindVizToTableBlock(eb, e, "equipment", lastDoublePipeLog, "doublePipe");
       }
       doublePipeLogTablesWrap.appendChild(sec);
     }
@@ -7115,6 +9046,7 @@
     renderDoublePipeLogTimeline();
     renderDoublePipeLogTables();
     renderDoublePipeLogProductionQtyTable();
+    renderDoublePipeLogDowntimeSection();
     if (doublePipeLogMaintWrap) {
       if (lastDoublePipeLog.maintenance) {
         doublePipeLogMaintWrap.hidden = false;
@@ -7289,10 +9221,12 @@
 
   function getHwaseungDoublePipeLogEquipmentStatsForTables() {
     const sub = reaggregateHwaseungDoublePipeLogFiltered();
-    if (sub && Array.isArray(sub.equipmentStats)) return sub.equipmentStats;
-    return lastHwaseungDoublePipeLog && lastHwaseungDoublePipeLog.equipmentStats
-      ? lastHwaseungDoublePipeLog.equipmentStats
-      : [];
+    if (sub && Array.isArray(sub.equipmentStats)) return sortEquipmentStatsByLineNo(sub.equipmentStats);
+    return sortEquipmentStatsByLineNo(
+      lastHwaseungDoublePipeLog && lastHwaseungDoublePipeLog.equipmentStats
+        ? lastHwaseungDoublePipeLog.equipmentStats
+        : []
+    );
   }
 
   function renderHwaseungDoublePipeLogTables() {
@@ -7300,7 +9234,27 @@
     hwaseungDoublePipeLogTablesWrap.innerHTML = "";
     const sub = reaggregateHwaseungDoublePipeLogFiltered();
     const slicerActive = !!sub;
-    const months = slicerActive ? [] : lastHwaseungDoublePipeLog.monthlyStats || [];
+    let monthTableTitle = "월별 집계";
+    let monthFirstCol = "월";
+    let months = lastHwaseungDoublePipeLog.monthlyStats || [];
+    if (slicerActive && sub) {
+      const gran = hwaseungDoublePipeLogGranularity;
+      const hasSel =
+        (gran === "month" && hwaseungDoublePipeLogSelectedMonths.size > 0) ||
+        (gran === "day" && hwaseungDoublePipeLogSelectedDays.size > 0);
+      if (hasSel) {
+        months = collectPivotRowsForBreakdownTable(
+          sub,
+          gran,
+          hwaseungDoublePipeLogSelectedMonths,
+          hwaseungDoublePipeLogSelectedDays
+        );
+        monthTableTitle = gran === "month" ? "선택 월 · 집계" : "선택 일 · 집계";
+        monthFirstCol = gran === "month" ? "월" : "일";
+      } else {
+        months = [];
+      }
+    }
     const eqs = getHwaseungDoublePipeLogEquipmentStatsForTables();
     const procBlocks =
       sub && Array.isArray(sub.processBlocks) ? sub.processBlocks : lastHwaseungDoublePipeLog.processBlocks || [];
@@ -7322,9 +9276,9 @@
     }
     const stopLabels = splitStop ? HWASEUNG_STOP_LABELS : undefined;
     if (months.length) {
-      hwaseungDoublePipeLogTablesWrap.appendChild(
-        buildDrawingBreakdownTable("월별 집계", "월", months, splitStop, stopLabels)
-      );
+      const monthBlock = buildDrawingBreakdownTable(monthTableTitle, monthFirstCol, months, splitStop, stopLabels);
+      hwaseungDoublePipeLogTablesWrap.appendChild(monthBlock);
+      appendStopKindVizToTableBlock(monthBlock, months, "month", lastHwaseungDoublePipeLog, "hwaseung");
     }
     if (eqs.length) {
       let eqTitle = lastHwaseungDoublePipeLog.hasEquipmentColumn ? "설비별 집계" : "설비별 집계 (설비 열 없음 · 전체)";
@@ -7335,9 +9289,9 @@
             : [...hwaseungDoublePipeLogSelectedDays].sort().join(", ");
         eqTitle += ` · 선택: ${hint}`;
       }
-      hwaseungDoublePipeLogTablesWrap.appendChild(
-        buildDrawingBreakdownTable(eqTitle, "설비·구분", eqs, splitStop, stopLabels)
-      );
+      const eqBlock = buildDrawingBreakdownTable(eqTitle, "설비·구분", eqs, splitStop, stopLabels);
+      hwaseungDoublePipeLogTablesWrap.appendChild(eqBlock);
+      appendStopKindVizToTableBlock(eqBlock, eqs, "equipment", lastHwaseungDoublePipeLog, "hwaseung");
     }
     for (const blk of procBlocks) {
       const m = blk.monthlyStats || [];
@@ -7349,7 +9303,11 @@
       h3.className = "drawing-log-block__title";
       h3.textContent = `공정 · ${blk.process}`;
       sec.appendChild(h3);
-      if (m.length) sec.appendChild(buildDrawingBreakdownTable("월별 집계", "월", m, splitStop, stopLabels));
+      if (m.length) {
+        const mb = buildDrawingBreakdownTable("월별 집계", "월", m, splitStop, stopLabels);
+        sec.appendChild(mb);
+        appendStopKindVizToTableBlock(mb, m, "month", lastHwaseungDoublePipeLog, "hwaseung");
+      }
       if (e.length) {
         let eqTitle = lastHwaseungDoublePipeLog.hasEquipmentColumn ? "설비별 집계" : "설비별 집계 (설비 열 없음 · 전체)";
         if (slicerActive) {
@@ -7359,7 +9317,9 @@
               : [...hwaseungDoublePipeLogSelectedDays].sort().join(", ");
           eqTitle += ` · 선택: ${hint}`;
         }
-        sec.appendChild(buildDrawingBreakdownTable(eqTitle, "설비·구분", e, splitStop, stopLabels));
+        const eb = buildDrawingBreakdownTable(eqTitle, "설비·구분", e, splitStop, stopLabels);
+        sec.appendChild(eb);
+        appendStopKindVizToTableBlock(eb, e, "equipment", lastHwaseungDoublePipeLog, "hwaseung");
       }
       hwaseungDoublePipeLogTablesWrap.appendChild(sec);
     }
@@ -7670,6 +9630,7 @@
     renderHwaseungDoublePipeLogTimeline();
     renderHwaseungDoublePipeLogTables();
     renderHwaseungDoublePipeLogProductionQtyTable();
+    renderHwaseungDoublePipeLogDowntimeSection();
     if (hwaseungDoublePipeLogMaintWrap) {
       if (lastHwaseungDoublePipeLog.maintenance) {
         hwaseungDoublePipeLogMaintWrap.hidden = false;
@@ -7868,8 +9829,8 @@
   function getMufflerLogEquipmentStatsForTables(segIdx) {
     const sub = reaggregateMufflerLogFiltered(segIdx);
     const log = mufflerSegmentLog(segIdx);
-    if (sub && Array.isArray(sub.equipmentStats)) return sub.equipmentStats;
-    return log && log.equipmentStats ? log.equipmentStats : [];
+    if (sub && Array.isArray(sub.equipmentStats)) return sortEquipmentStatsByLineNo(sub.equipmentStats);
+    return sortEquipmentStatsByLineNo(log && log.equipmentStats ? log.equipmentStats : []);
   }
 
   /** @param {HTMLElement} tablesWrap */
@@ -7880,7 +9841,21 @@
     const st = getMufflerSegState(segIdx);
     const sub = reaggregateMufflerLogFiltered(segIdx);
     const slicerActive = !!sub;
-    const months = slicerActive ? [] : log.monthlyStats || [];
+    let monthTableTitle = "월별 집계";
+    let monthFirstCol = "월";
+    let months = log.monthlyStats || [];
+    if (slicerActive && sub) {
+      const gran = st.granularity;
+      const hasSel =
+        (gran === "month" && st.selectedMonths.size > 0) || (gran === "day" && st.selectedDays.size > 0);
+      if (hasSel) {
+        months = collectPivotRowsForBreakdownTable(sub, gran, st.selectedMonths, st.selectedDays);
+        monthTableTitle = gran === "month" ? "선택 월 · 집계" : "선택 일 · 집계";
+        monthFirstCol = gran === "month" ? "월" : "일";
+      } else {
+        months = [];
+      }
+    }
     const eqs = getMufflerLogEquipmentStatsForTables(segIdx);
     const procBlocks =
       sub && Array.isArray(sub.processBlocks) ? sub.processBlocks : log.processBlocks || [];
@@ -7898,7 +9873,9 @@
       return;
     }
     if (months.length) {
-      tablesWrap.appendChild(buildDrawingBreakdownTable("월별 집계", "월", months, splitStop));
+      const monthBlock = buildDrawingBreakdownTable(monthTableTitle, monthFirstCol, months, splitStop);
+      tablesWrap.appendChild(monthBlock);
+      appendStopKindVizToTableBlock(monthBlock, months, "month", log, "muffler");
     }
     if (eqs.length) {
       let eqTitle = log.hasEquipmentColumn ? "설비별 집계" : "설비별 집계 (설비 열 없음 · 전체)";
@@ -7909,7 +9886,9 @@
             : [...st.selectedDays].sort().join(", ");
         eqTitle += ` · 선택: ${hint}`;
       }
-      tablesWrap.appendChild(buildDrawingBreakdownTable(eqTitle, "설비·구분", eqs, splitStop));
+      const eqBlock = buildDrawingBreakdownTable(eqTitle, "설비·구분", eqs, splitStop);
+      tablesWrap.appendChild(eqBlock);
+      appendStopKindVizToTableBlock(eqBlock, eqs, "equipment", log, "muffler");
     }
     for (const blk of procBlocks) {
       const m = blk.monthlyStats || [];
@@ -7921,7 +9900,11 @@
       h3.className = "drawing-log-block__title";
       h3.textContent = `공정 · ${blk.process}`;
       sec.appendChild(h3);
-      if (m.length) sec.appendChild(buildDrawingBreakdownTable("월별 집계", "월", m, splitStop));
+      if (m.length) {
+        const mb = buildDrawingBreakdownTable("월별 집계", "월", m, splitStop);
+        sec.appendChild(mb);
+        appendStopKindVizToTableBlock(mb, m, "month", log, "muffler");
+      }
       if (e.length) {
         let eqTitle = log.hasEquipmentColumn ? "설비별 집계" : "설비별 집계 (설비 열 없음 · 전체)";
         if (slicerActive) {
@@ -7931,7 +9914,9 @@
               : [...st.selectedDays].sort().join(", ");
           eqTitle += ` · 선택: ${hint}`;
         }
-        sec.appendChild(buildDrawingBreakdownTable(eqTitle, "설비·구분", e, splitStop));
+        const eb = buildDrawingBreakdownTable(eqTitle, "설비·구분", e, splitStop);
+        sec.appendChild(eb);
+        appendStopKindVizToTableBlock(eb, e, "equipment", log, "muffler");
       }
       tablesWrap.appendChild(sec);
     }
@@ -8333,11 +10318,17 @@
     prodWrap.className = "drawing-log-prod-wrap";
     root.appendChild(prodWrap);
 
+    const downtimeHost = document.createElement("div");
+    downtimeHost.className = "muffler-log-seg-downtime drawing-log-downtime-wrap";
+    downtimeHost.hidden = true;
+    root.appendChild(downtimeHost);
+
     renderMufflerLogTimelineInto(timeline, segIdx);
     updateMufflerSegmentKpiRow(root, segIdx);
     updateMufflerSegmentOpsRow(root, segIdx);
     renderMufflerLogTablesInto(tablesWrap, segIdx);
     renderMufflerLogProductionQtyInto(prodWrap, segIdx);
+    renderMufflerSegmentDowntimeSection(root, segIdx);
 
     return root;
   }
@@ -8387,9 +10378,11 @@
   /**
    * @param {any} wb
    * @param {string} fileLabel
+   * @param {{ navigate?: boolean }} [opts] navigate 기본 true — 생산 업로드 허브에서는 false
    * @returns {boolean}
    */
-  function tryConsumeWorkbookAsMufflerLog(wb, fileLabel) {
+  function tryConsumeWorkbookAsMufflerLog(wb, fileLabel, opts) {
+    const navigate = opts?.navigate !== false;
     const hit = findMufflerLogSheetInWorkbook(wb);
     if (!hit || !hit.segments.length) return false;
     const skipNames = hit.segments.map((s) => s.sheetName);
@@ -8403,22 +10396,30 @@
     };
     initMufflerLogSlicerFromData();
     renderMufflerLogPanel();
-    setView("mufflerLog");
+    if (navigate) setView("mufflerLog");
     return true;
   }
 
-  async function handleMufflerLogFile(file) {
+  /**
+   * @param {File} file
+   * @param {{ navigate?: boolean }} [opts]
+   */
+  async function handleMufflerLogFile(file, opts) {
+    const navigate = opts?.navigate !== false;
     if (!file) return;
     try {
       const buf = await loadArrayBuffer(file);
       const wb = XLSX.read(buf, { type: "array", cellDates: true });
-      const ok = tryConsumeWorkbookAsMufflerLog(wb, file.name);
+      const ok = tryConsumeWorkbookAsMufflerLog(wb, file.name, { navigate });
       if (!ok) {
         alert(
           "「머플러」또는「단조머플러」시트를 찾을 수 없거나, 작업일자·생산·작업시간 등 알 수 있는 열이 없습니다.\n시트 이름·헤더를 확인해 주세요."
         );
         lastMufflerLog = null;
         clearMufflerLogUi();
+      } else if (!navigate) {
+        markTeamProdHubUploadOk("muffler", file.name);
+        if (currentView === "planVsActual") renderPlanVsActualPanel();
       }
     } catch (e) {
       console.error(e);
@@ -8431,7 +10432,14 @@
    * @param {string} fileLabel
    * @returns {boolean}
    */
-  function tryConsumeWorkbookAsDrawingLog(wb, fileLabel) {
+  /**
+   * @param {any} wb
+   * @param {string} fileLabel
+   * @param {{ navigate?: boolean }} [opts]
+   * @returns {boolean}
+   */
+  function tryConsumeWorkbookAsDrawingLog(wb, fileLabel, opts) {
+    const navigate = opts?.navigate !== false;
     const hit = findDrawingLogSheetInWorkbook(wb);
     if (!hit) return false;
     const p = hit.parsed;
@@ -8446,22 +10454,30 @@
     };
     initDrawingLogSlicerFromData();
     renderDrawingLogPanel();
-    setView("drawingLog");
+    if (navigate) setView("drawingLog");
     return true;
   }
 
-  async function handleDrawingLogFile(file) {
+  /**
+   * @param {File} file
+   * @param {{ navigate?: boolean }} [opts]
+   */
+  async function handleDrawingLogFile(file, opts) {
+    const navigate = opts?.navigate !== false;
     if (!file) return;
     try {
       const buf = await loadArrayBuffer(file);
       const wb = XLSX.read(buf, { type: "array", cellDates: true });
-      const ok = tryConsumeWorkbookAsDrawingLog(wb, file.name);
+      const ok = tryConsumeWorkbookAsDrawingLog(wb, file.name, { navigate });
       if (!ok) {
         alert(
           "「드로잉」시트가 없거나, 작업일자·생산수량·작업시간 등 알 수 있는 열이 없습니다.\n시트 이름에 드로잉이 들어가는지, 헤더 행을 확인해 주세요."
         );
         lastDrawingLog = null;
         clearDrawingLogUi();
+      } else if (!navigate) {
+        markTeamProdHubUploadOk("drawing", file.name);
+        if (currentView === "planVsActual") renderPlanVsActualPanel();
       }
     } catch (e) {
       console.error(e);
@@ -8474,7 +10490,14 @@
    * @param {string} fileLabel
    * @returns {boolean}
    */
-  function tryConsumeWorkbookAsParallelLog(wb, fileLabel) {
+  /**
+   * @param {any} wb
+   * @param {string} fileLabel
+   * @param {{ navigate?: boolean }} [opts]
+   * @returns {boolean}
+   */
+  function tryConsumeWorkbookAsParallelLog(wb, fileLabel, opts) {
+    const navigate = opts?.navigate !== false;
     const hit = findParallelLogSheetInWorkbook(wb);
     if (!hit) return false;
     const p = hit.parsed;
@@ -8489,22 +10512,30 @@
     };
     initParallelLogSlicerFromData();
     renderParallelLogPanel();
-    setView("parallelLog");
+    if (navigate) setView("parallelLog");
     return true;
   }
 
-  async function handleParallelLogFile(file) {
+  /**
+   * @param {File} file
+   * @param {{ navigate?: boolean }} [opts]
+   */
+  async function handleParallelLogFile(file, opts) {
+    const navigate = opts?.navigate !== false;
     if (!file) return;
     try {
       const buf = await loadArrayBuffer(file);
       const wb = XLSX.read(buf, { type: "array", cellDates: true });
-      const ok = tryConsumeWorkbookAsParallelLog(wb, file.name);
+      const ok = tryConsumeWorkbookAsParallelLog(wb, file.name, { navigate });
       if (!ok) {
         alert(
           "「페럴」시트가 없거나, 작업일자·생산량(ERP)·작업시간 등 알 수 있는 열이 없습니다.\n시트 이름이 페럴인지, 헤더 행을 확인해 주세요."
         );
         lastParallelLog = null;
         clearParallelLogUi();
+      } else if (!navigate) {
+        markTeamProdHubUploadOk("parallel", file.name);
+        if (currentView === "planVsActual") renderPlanVsActualPanel();
       }
     } catch (e) {
       console.error(e);
@@ -8512,7 +10543,14 @@
     }
   }
 
-  function tryConsumeWorkbookAsDoublePipeLog(wb, fileLabel) {
+  /**
+   * @param {any} wb
+   * @param {string} fileLabel
+   * @param {{ navigate?: boolean }} [opts]
+   * @returns {boolean}
+   */
+  function tryConsumeWorkbookAsDoublePipeLog(wb, fileLabel, opts) {
+    const navigate = opts?.navigate !== false;
     const hit = findDoublePipeLogSheetInWorkbook(wb);
     if (!hit) return false;
     const p = hit.parsed;
@@ -8527,22 +10565,30 @@
     };
     initDoublePipeLogSlicerFromData();
     renderDoublePipeLogPanel();
-    setView("doublePipeLog");
+    if (navigate) setView("doublePipeLog");
     return true;
   }
 
-  async function handleDoublePipeLogFile(file) {
+  /**
+   * @param {File} file
+   * @param {{ navigate?: boolean }} [opts]
+   */
+  async function handleDoublePipeLogFile(file, opts) {
+    const navigate = opts?.navigate !== false;
     if (!file) return;
     try {
       const buf = await loadArrayBuffer(file);
       const wb = XLSX.read(buf, { type: "array", cellDates: true });
-      const ok = tryConsumeWorkbookAsDoublePipeLog(wb, file.name);
+      const ok = tryConsumeWorkbookAsDoublePipeLog(wb, file.name, { navigate });
       if (!ok) {
         alert(
           "「이중관」시트가 없거나, 작업일자·생산·작업시간 등 읽을 수 있는 열이 없습니다.\n시트 이름과 헤더 행을 확인해 주세요.\n(비가동 S~V열, 불량 W+AJ열, 생산 N열 기준)"
         );
         lastDoublePipeLog = null;
         clearDoublePipeLogUi();
+      } else if (!navigate) {
+        markTeamProdHubUploadOk("doublePipe", file.name);
+        if (currentView === "planVsActual") renderPlanVsActualPanel();
       }
     } catch (e) {
       console.error(e);
@@ -8550,7 +10596,14 @@
     }
   }
 
-  function tryConsumeWorkbookAsHwaseungDoublePipeLog(wb, fileLabel) {
+  /**
+   * @param {any} wb
+   * @param {string} fileLabel
+   * @param {{ navigate?: boolean }} [opts]
+   * @returns {boolean}
+   */
+  function tryConsumeWorkbookAsHwaseungDoublePipeLog(wb, fileLabel, opts) {
+    const navigate = opts?.navigate !== false;
     const hit = findHwaseungDoublePipeLogSheetInWorkbook(wb);
     if (!hit) return false;
     const p = hit.parsed;
@@ -8565,22 +10618,30 @@
     };
     initHwaseungDoublePipeLogSlicerFromData();
     renderHwaseungDoublePipeLogPanel();
-    setView("hwaseungDoublePipeLog");
+    if (navigate) setView("hwaseungDoublePipeLog");
     return true;
   }
 
-  async function handleHwaseungDoublePipeLogFile(file) {
+  /**
+   * @param {File} file
+   * @param {{ navigate?: boolean }} [opts]
+   */
+  async function handleHwaseungDoublePipeLogFile(file, opts) {
+    const navigate = opts?.navigate !== false;
     if (!file) return;
     try {
       const buf = await loadArrayBuffer(file);
       const wb = XLSX.read(buf, { type: "array", cellDates: true });
-      const ok = tryConsumeWorkbookAsHwaseungDoublePipeLog(wb, file.name);
+      const ok = tryConsumeWorkbookAsHwaseungDoublePipeLog(wb, file.name, { navigate });
       if (!ok) {
         alert(
           "「화승이중관」시트가 없거나, 작업일자·생산·작업시간 등 읽을 수 있는 열이 없습니다.\n시트 이름과 헤더 행을 확인해 주세요.\n(비가동 R~V열, 불량은 X+Y+Z 및 AK+AL+AR 세부만 합산, 생산 L열 기준)"
         );
         lastHwaseungDoublePipeLog = null;
         clearHwaseungDoublePipeLogUi();
+      } else if (!navigate) {
+        markTeamProdHubUploadOk("hwaseung", file.name);
+        if (currentView === "planVsActual") renderPlanVsActualPanel();
       }
     } catch (e) {
       console.error(e);
@@ -8967,6 +11028,7 @@
       alignBoardDates(board);
       lastBoard = board;
       onDataReady();
+      flashOrderBoardUploadOk();
       return;
     }
 
@@ -9022,6 +11084,7 @@
     if (lastStockData) lastBoard = mergeStockDataIntoBoard(lastBoard, lastStockData);
     alignBoardDates(lastBoard);
     onDataReady();
+    flashOrderBoardUploadOk();
   }
 
   async function handleFile(file) {
@@ -9119,6 +11182,7 @@
       if (stockSheetInfoEl) stockSheetInfoEl.textContent = infoLine;
       populateStockTableFiltersFromData();
       renderStockTableView();
+      flashStockUploadOk(file.name);
 
       if (lastBoard) {
         applyStockDataToCurrentBoard();
@@ -9270,11 +11334,21 @@
     });
   }
 
-  bindTeamProdHubPair(teamProdDrawingDropzone, teamProdDrawingFileInput, handleDrawingLogFile);
-  bindTeamProdHubPair(teamProdParallelDropzone, teamProdParallelFileInput, handleParallelLogFile);
-  bindTeamProdHubPair(teamProdMufflerDropzone, teamProdMufflerFileInput, handleMufflerLogFile);
-  bindTeamProdHubPair(teamProdDoublePipeDropzone, teamProdDoublePipeFileInput, handleDoublePipeLogFile);
-  bindTeamProdHubPair(teamProdHwaseungDropzone, teamProdHwaseungFileInput, handleHwaseungDoublePipeLogFile);
+  bindTeamProdHubPair(teamProdDrawingDropzone, teamProdDrawingFileInput, (f) =>
+    handleDrawingLogFile(f, { navigate: false })
+  );
+  bindTeamProdHubPair(teamProdParallelDropzone, teamProdParallelFileInput, (f) =>
+    handleParallelLogFile(f, { navigate: false })
+  );
+  bindTeamProdHubPair(teamProdMufflerDropzone, teamProdMufflerFileInput, (f) =>
+    handleMufflerLogFile(f, { navigate: false })
+  );
+  bindTeamProdHubPair(teamProdDoublePipeDropzone, teamProdDoublePipeFileInput, (f) =>
+    handleDoublePipeLogFile(f, { navigate: false })
+  );
+  bindTeamProdHubPair(teamProdHwaseungDropzone, teamProdHwaseungFileInput, (f) =>
+    handleHwaseungDoublePipeLogFile(f, { navigate: false })
+  );
 
   if (drawingLogSlicerClear) {
     drawingLogSlicerClear.addEventListener("click", () => {
@@ -9730,6 +11804,79 @@
     }
   });
 
+  if (planVsActualDateApply) {
+    planVsActualDateApply.addEventListener("click", () => {
+      renderPlanVsActualPanel();
+    });
+  }
+  if (planVsActualDateReset) {
+    planVsActualDateReset.addEventListener("click", () => {
+      const defs = collectPlanVsActualTeamDefs();
+      const allDates = collectPlanVsActualAllDateKeysFromDefs(defs);
+      const isoDates = allDates.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d));
+      if (planVsActualDateFrom && planVsActualDateTo && isoDates.length) {
+        planVsActualDateFrom.removeAttribute("max");
+        planVsActualDateTo.removeAttribute("max");
+        planVsActualDateFrom.value = isoDates[0];
+        planVsActualDateTo.value = isoDates[isoDates.length - 1];
+      }
+      renderPlanVsActualPanel();
+    });
+  }
+
+  if (planVsActualFilterBar && !planVsActualFilterBar.dataset.planVsFilterBound) {
+    planVsActualFilterBar.dataset.planVsFilterBound = "1";
+    planVsActualFilterBar.addEventListener("change", (e) => {
+      const el = /** @type {HTMLInputElement | HTMLSelectElement | null} */ (e.target);
+      if (!el) return;
+      if (el instanceof HTMLInputElement && el.type === "date") return;
+      if (el.matches && el.matches("input[data-plan-team-block]") && planVsActualProcWrap) {
+        const raw = el.dataset.planTeamBlock || "";
+        const keys = raw.split(",").map((x) => x.trim()).filter(Boolean);
+        if (!keys.length) return;
+        if (el.checked) keys.forEach((k) => planVsActualFilterState.teamKeys.add(k));
+        else keys.forEach((k) => planVsActualFilterState.teamKeys.delete(k));
+        const anyTeam = planVsActualFilterState.teamKeys.size > 0;
+        if (!anyTeam) {
+          el.checked = true;
+          keys.forEach((k) => planVsActualFilterState.teamKeys.add(k));
+        }
+      }
+      if (el.matches && el.matches("input[data-def-key][data-proc-name]") && planVsActualProcWrap) {
+        const dk = el.dataset.defKey;
+        const pk = el.dataset.procName;
+        if (!dk || !pk) return;
+        const peers = [...planVsActualProcWrap.querySelectorAll(`input[data-def-key="${dk}"][data-proc-name]`)]
+          .map((x) => /** @type {HTMLInputElement} */ (x).dataset.procName)
+          .filter(Boolean);
+        const unique = [...new Set(peers)];
+        const m = planVsActualFilterState.procPickByDef;
+        if (!el.checked) {
+          if (!m.has(dk)) {
+            const s = new Set(unique.filter((x) => x !== pk));
+            m.set(dk, s);
+          } else {
+            const s = m.get(dk);
+            if (s) {
+              s.delete(pk);
+              if (s.size === 0) m.delete(dk);
+            }
+          }
+        } else if (m.has(dk)) {
+          const s = m.get(dk);
+          if (s) {
+            s.add(pk);
+            if (unique.length && s.size >= unique.length) m.delete(dk);
+          }
+        }
+      }
+      if (el === planVsActualProcMode) {
+        planVsActualFilterState.procMode = planVsActualProcMode.value === "split" ? "split" : "all";
+      }
+      renderPlanVsActualPanel();
+    });
+  }
+
   /**
    * @param {"category"|"code"|"name"|"stock"} key
    */
@@ -9937,6 +12084,24 @@
       if (!el || !viewHome.contains(el)) return;
       applyMainViewFromElement(el);
     });
+  }
+
+  if (btnSidebarToggle) {
+    btnSidebarToggle.addEventListener("click", () => {
+      const next = !document.body.classList.contains("app-body--sidebar-collapsed");
+      applySidebarCollapsed(next);
+      try {
+        localStorage.setItem("wheel.sidebarCollapsed", next ? "1" : "0");
+      } catch (_) {
+        /* noop */
+      }
+    });
+  }
+
+  try {
+    applySidebarCollapsed(localStorage.getItem("wheel.sidebarCollapsed") === "1");
+  } catch (_) {
+    applySidebarCollapsed(false);
   }
 
   renderSummary(null);

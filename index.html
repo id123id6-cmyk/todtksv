@@ -40,10 +40,13 @@
         <button type="button" class="nav-item nav-item--sub" data-view="hwaseungDoublePipeLog">화승이중관</button>
       </div>
       <div class="sidebar-nav-divider sidebar-nav-divider--spectrum" role="presentation" aria-hidden="true"></div>
-      <div class="sidebar-nav-follow">
+      <div class="sidebar-nav-follow" role="group" aria-label="주간 업무보고·계획대비 실적·재고 단가">
+        <div class="nav-group__title nav-group__title--section">주간 업무보고</div>
+        <button type="button" class="nav-item nav-item--sub" data-view="planVsActual">계획대비 실적</button>
         <button type="button" class="nav-item nav-item--sub" data-view="stockUnitPrice">재고 단가</button>
       </div>
     </nav>
+    <button type="button" class="sidebar-toggle-btn" id="btnSidebarToggle" aria-pressed="false" aria-label="사이드바 숨기기" title="사이드바 숨기기">◀</button>
   </aside>
 
   <div class="main-wrap">
@@ -151,21 +154,33 @@
       <div class="panel">
         <h2 class="view-title">발주서 엑셀 업로드</h2>
         <p class="view-desc">시트 「발주서 입력」(발주량·차이수량·부족품 등)과 「지난발주서」(지난발주)가 있으면 같은 파일에서 함께 읽습니다. 세로 형식(날짜·품목별 행)은 첫 행 헤더를 기준으로 열이 자동 맞춰집니다.</p>
-        <label class="dropzone" id="dropzone">
-          <input type="file" id="fileInput" accept=".xlsx,.xls" hidden />
-          <span class="dropzone__text">파일 선택 또는 여기로 드래그</span>
-          <span class="dropzone__hint">.xlsx / .xls · 시트 「발주서 입력」</span>
-        </label>
-        <p class="file-name" id="fileName"></p>
-        <p class="sheet-info" id="sheetInfo"></p>
+        <div class="upload-zone-card" data-upload-zone="order">
+          <div class="upload-zone-card__head">
+            <span class="upload-zone-card__label">발주서 파일</span>
+            <span class="upload-zone-card__status" hidden aria-live="polite"></span>
+          </div>
+          <label class="dropzone" id="dropzone">
+            <input type="file" id="fileInput" accept=".xlsx,.xls" hidden />
+            <span class="dropzone__text">파일 선택 또는 여기로 드래그</span>
+            <span class="dropzone__hint">.xlsx / .xls · 시트 「발주서 입력」</span>
+          </label>
+          <p class="file-name" id="fileName"></p>
+          <p class="sheet-info" id="sheetInfo"></p>
+        </div>
 
-        <label class="dropzone dropzone--sub">
-          <input type="file" id="stockFileInput" accept=".xlsx,.xls" hidden />
-          <span class="dropzone__text">재고파일 선택</span>
-          <span class="dropzone__hint">재고 파일 업로드 시 재고 열 + 차이수량(일별)에 반영</span>
-        </label>
-        <p class="file-name" id="stockFileName"></p>
-        <p class="sheet-info" id="stockSheetInfo"></p>
+        <div class="upload-zone-card" data-upload-zone="stock">
+          <div class="upload-zone-card__head">
+            <span class="upload-zone-card__label">재고 파일</span>
+            <span class="upload-zone-card__status" hidden aria-live="polite"></span>
+          </div>
+          <label class="dropzone dropzone--sub" id="stockDropzone">
+            <input type="file" id="stockFileInput" accept=".xlsx,.xls" hidden />
+            <span class="dropzone__text">재고파일 선택</span>
+            <span class="dropzone__hint">재고 파일 업로드 시 재고 열 + 차이수량(일별)에 반영</span>
+          </label>
+          <p class="file-name" id="stockFileName"></p>
+          <p class="sheet-info" id="stockSheetInfo"></p>
+        </div>
 
         <div class="mapping" id="mappingBlock" hidden>
           <h3>열 매핑</h3>
@@ -202,12 +217,15 @@
         <div class="table-toolbar">
           <div>
             <h2 class="view-title view-title--inline">생산 엑셀 업로드</h2>
-            <p class="view-desc view-desc--toolbar">팀별 작업일지 형식의 엑셀을 아래에서 골라 올리면, 읽기에 성공했을 때 해당 팀 화면으로 이동해 요약·표가 표시됩니다.</p>
+            <p class="view-desc view-desc--toolbar">팀별 작업일지 엑셀을 아래에서 올리면 이 페이지에 그대로 두고 데이터만 반영합니다. 상세 표·타임라인은 왼쪽 메뉴의 해당 팀에서 열 수 있습니다.</p>
           </div>
         </div>
         <div class="team-prod-hub__grid" role="list">
-          <div class="team-prod-hub__card" role="listitem">
-            <h3 class="team-prod-hub__name">드로잉</h3>
+          <div class="team-prod-hub__card" role="listitem" data-team-prod="drawing">
+            <div class="team-prod-hub__card-head">
+              <h3 class="team-prod-hub__name">드로잉</h3>
+              <span class="team-prod-hub__status" hidden aria-live="polite"></span>
+            </div>
             <p class="team-prod-hub__hint">「드로잉」 시트 기준</p>
             <label class="dropzone team-prod-hub__drop" id="teamProdDrawingDropzone">
               <input type="file" id="teamProdDrawingFileInput" accept=".xlsx,.xls" hidden />
@@ -215,8 +233,11 @@
               <span class="dropzone__hint">.xlsx / .xls</span>
             </label>
           </div>
-          <div class="team-prod-hub__card" role="listitem">
-            <h3 class="team-prod-hub__name">페럴</h3>
+          <div class="team-prod-hub__card" role="listitem" data-team-prod="parallel">
+            <div class="team-prod-hub__card-head">
+              <h3 class="team-prod-hub__name">페럴</h3>
+              <span class="team-prod-hub__status" hidden aria-live="polite"></span>
+            </div>
             <p class="team-prod-hub__hint">「페럴」 시트 기준</p>
             <label class="dropzone team-prod-hub__drop" id="teamProdParallelDropzone">
               <input type="file" id="teamProdParallelFileInput" accept=".xlsx,.xls" hidden />
@@ -224,8 +245,11 @@
               <span class="dropzone__hint">.xlsx / .xls</span>
             </label>
           </div>
-          <div class="team-prod-hub__card" role="listitem">
-            <h3 class="team-prod-hub__name">머플러</h3>
+          <div class="team-prod-hub__card" role="listitem" data-team-prod="muffler">
+            <div class="team-prod-hub__card-head">
+              <h3 class="team-prod-hub__name">머플러</h3>
+              <span class="team-prod-hub__status" hidden aria-live="polite"></span>
+            </div>
             <p class="team-prod-hub__hint">머플러·단조머플러 시트</p>
             <label class="dropzone team-prod-hub__drop" id="teamProdMufflerDropzone">
               <input type="file" id="teamProdMufflerFileInput" accept=".xlsx,.xls" hidden />
@@ -233,8 +257,11 @@
               <span class="dropzone__hint">.xlsx / .xls</span>
             </label>
           </div>
-          <div class="team-prod-hub__card" role="listitem">
-            <h3 class="team-prod-hub__name">이중관</h3>
+          <div class="team-prod-hub__card" role="listitem" data-team-prod="doublePipe">
+            <div class="team-prod-hub__card-head">
+              <h3 class="team-prod-hub__name">이중관</h3>
+              <span class="team-prod-hub__status" hidden aria-live="polite"></span>
+            </div>
             <p class="team-prod-hub__hint">「이중관」 시트 기준</p>
             <label class="dropzone team-prod-hub__drop" id="teamProdDoublePipeDropzone">
               <input type="file" id="teamProdDoublePipeFileInput" accept=".xlsx,.xls" hidden />
@@ -242,8 +269,11 @@
               <span class="dropzone__hint">.xlsx / .xls</span>
             </label>
           </div>
-          <div class="team-prod-hub__card" role="listitem">
-            <h3 class="team-prod-hub__name">화승이중관</h3>
+          <div class="team-prod-hub__card" role="listitem" data-team-prod="hwaseung">
+            <div class="team-prod-hub__card-head">
+              <h3 class="team-prod-hub__name">화승이중관</h3>
+              <span class="team-prod-hub__status" hidden aria-live="polite"></span>
+            </div>
             <p class="team-prod-hub__hint">「화승이중관」 시트 기준</p>
             <label class="dropzone team-prod-hub__drop" id="teamProdHwaseungDropzone">
               <input type="file" id="teamProdHwaseungFileInput" accept=".xlsx,.xls" hidden />
@@ -336,7 +366,7 @@
           <div>
             <h2 class="view-title view-title--inline">날짜별 발주 달력</h2>
             <p class="view-desc view-desc--toolbar">
-              날짜마다 품목을 묶어 보여 줍니다. 아래 필터는 일별 통합표와 동일하며, 「발주량」만 달력에 반영됩니다.<span id="orderCalTeamHint" class="view-desc__team" hidden></span>
+              날짜마다 품목을 한 줄로 묶어 보여 줍니다. 아래 필터는 일별 통합표와 동일하며, 「발주량」이 달력에 반영됩니다. 재고 파일을 넣어 둔 경우 <strong>잔·부</strong>(날짜별 누적 잔여·부족)이 달력 칸에 붙고, 위 월 요약에는 <strong>말잔</strong>과 부족 시 <strong>이달 마지막 데이터일 기준 누적 부족</strong>(이전 달·이전 날짜 발주까지 반영)이 붙습니다. 첫 부족일은 툴팁에서 확인할 수 있습니다.<span id="orderCalTeamHint" class="view-desc__team" hidden></span>
             </p>
           </div>
         </div>
@@ -477,6 +507,7 @@
           <p id="drawingLogOps" class="drawing-log-ops" hidden></p>
           <div id="drawingLogTablesWrap" class="drawing-log-tables" hidden></div>
           <div id="drawingLogProdWrap" class="drawing-log-prod-wrap" hidden></div>
+          <div id="drawingLogDowntimeWrap" class="drawing-log-downtime-wrap" hidden></div>
           <div id="drawingLogMaintWrap" class="drawing-log-maint-wrap" hidden></div>
         </div>
       </div>
@@ -540,6 +571,7 @@
           <p id="parallelLogOps" class="drawing-log-ops" hidden></p>
           <div id="parallelLogTablesWrap" class="drawing-log-tables" hidden></div>
           <div id="parallelLogProdWrap" class="drawing-log-prod-wrap" hidden></div>
+          <div id="parallelLogDowntimeWrap" class="drawing-log-downtime-wrap" hidden></div>
           <div id="parallelLogMaintWrap" class="drawing-log-maint-wrap" hidden></div>
         </div>
       </div>
@@ -607,6 +639,7 @@
           <p id="doublePipeLogOps" class="drawing-log-ops" hidden></p>
           <div id="doublePipeLogTablesWrap" class="drawing-log-tables" hidden></div>
           <div id="doublePipeLogProdWrap" class="drawing-log-prod-wrap" hidden></div>
+          <div id="doublePipeLogDowntimeWrap" class="drawing-log-downtime-wrap" hidden></div>
           <div id="doublePipeLogMaintWrap" class="drawing-log-maint-wrap" hidden></div>
         </div>
       </div>
@@ -680,6 +713,7 @@
           <p id="hwaseungDoublePipeLogOps" class="drawing-log-ops" hidden></p>
           <div id="hwaseungDoublePipeLogTablesWrap" class="drawing-log-tables" hidden></div>
           <div id="hwaseungDoublePipeLogProdWrap" class="drawing-log-prod-wrap" hidden></div>
+          <div id="hwaseungDoublePipeLogDowntimeWrap" class="drawing-log-downtime-wrap" hidden></div>
           <div id="hwaseungDoublePipeLogMaintWrap" class="drawing-log-maint-wrap" hidden></div>
         </div>
       </div>
@@ -697,6 +731,48 @@
           <div id="mufflerLogSegmentsHost" class="muffler-log-segments-host"></div>
           <div id="mufflerLogMaintWrap" class="drawing-log-maint-wrap" hidden></div>
         </div>
+      </div>
+    </section>
+
+    <section id="viewPlanVsActual" class="view" hidden>
+      <div class="panel">
+        <h2 class="view-title">계획대비 실적</h2>
+        <p class="view-desc">
+          <strong>표시할 공정</strong>은 <strong>드로잉 → 페럴 → 머플러 → 이중관 → 화승이중관</strong> 순으로 <strong>팀마다 한 줄</strong>이며, 왼쪽에 팀 표시를 두고 오른쪽에 공정 칩이 가로로 붙습니다. <strong>공정별</strong>일 때만 칩이 보입니다. 위에서 <strong>시작일·종료일</strong>을 고른 뒤 <strong>적용</strong>하면 표에 반영됩니다.
+        </p>
+        <div id="planVsActualFilterBar" class="filter-bar plan-vs-actual-filter-bar" hidden aria-label="팀·공정·기간 필터">
+          <div class="plan-vs-actual-filter-topline">
+            <div class="plan-vs-actual-filter-topline__dates plan-vs-actual-filter-row plan-vs-actual-filter-row--dates">
+              <div class="filter-field">
+                <span class="filter-label">시작일</span>
+                <input type="date" id="planVsActualDateFrom" class="filter-input plan-vs-actual-date-input" />
+              </div>
+              <div class="filter-field">
+                <span class="filter-label">종료일</span>
+                <input type="date" id="planVsActualDateTo" class="filter-input plan-vs-actual-date-input" />
+              </div>
+              <button type="button" class="btn btn-filter" id="planVsActualDateApply">적용</button>
+              <button type="button" class="btn ghost" id="planVsActualDateReset">데이터 구간</button>
+            </div>
+          </div>
+          <div class="plan-vs-actual-proc-strip" aria-label="공정 보기·표시할 공정">
+            <div class="plan-vs-actual-proc-strip__mode">
+              <div class="filter-field">
+                <span class="filter-label">공정 보기</span>
+                <select id="planVsActualProcMode" class="filter-input plan-vs-actual-select">
+                  <option value="all">공정 합계 (팀당 1행)</option>
+                  <option value="split">공정별 (행 나눔)</option>
+                </select>
+              </div>
+            </div>
+            <div class="plan-vs-actual-proc-strip__body filter-field filter-field--grow" id="planVsActualProcField" hidden>
+              <span class="filter-label">표시할 공정</span>
+              <div id="planVsActualProcWrap" class="plan-vs-proc-wrap"></div>
+            </div>
+          </div>
+        </div>
+        <p id="planVsActualEmpty" class="empty-state">아직 생산 엑셀 데이터가 없습니다. 왼쪽 <strong>생산 엑셀 업로드</strong>에서 팀 파일을 올려 주세요.</p>
+        <div id="planVsActualTeamsHost" class="plan-vs-actual-teams" aria-live="polite"></div>
       </div>
     </section>
 
