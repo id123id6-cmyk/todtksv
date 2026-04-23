@@ -37,6 +37,21 @@
     화승이중관: 290,
     머플러: 325,
   });
+
+  /**
+   * 발주 엑셀의 「제품」명을 일별 통합표 표시용으로만 치환(재고 병합은 엑셀 원문 기준으로 끝난 뒤 적용).
+   * 키·값 모두 `String.prototype.trim()` 결과가 일치할 때만 바꿉니다.
+   */
+  const ORDER_BOARD_PRODUCT_NAME_ALIASES = new Map(
+    Object.entries({
+      "허친슨 이중관F1142509C": "허친슨 이중관F1142509C (스파이럴)",
+      "허친슨 F1142513A": "허친슨 F1142513A (스파이럴)",
+      "허친슨이중관470023B": "허친슨이중관470023B (스파이럴)",
+      "허친슨F1142526A": "허친슨F1142526A (스파이럴)",
+      "허친슨F1142529D": "허친슨F1142529D (스파이럴)",
+      HK2135: "HUK2135(허친슨코리아) (스파이럴)",
+    }).map(([k, v]) => [k.trim(), String(v).trim()])
+  );
   /**
    * 고정 단가 마스터(`단가.xlsx`)에서 추출한 품목명→개당단가.
    * index.html에서 `assets/default-unit-prices.js`를 먼저 로드하면 window.DEFAULT_UNIT_PRICE_ROWS에 주입된다.
@@ -447,7 +462,7 @@
   let lastBoard = null;
   /** @type {any} */
   let lastWorkbook = null;
-  /** @type {{ stockByKey: Map<string, number>, stockByName: Map<string, number> } | null} */
+  /** @type {{ stockByKey: Map<string, number>, stockByName: Map<string, number>, stockByNormKey: Map<string, number>, stockByNormName: Map<string, number> } | null} */
   let lastStockData = null;
   /**
    * @type {{
@@ -2041,6 +2056,21 @@
       .replace(/\s+/g, "");
   }
 
+  /**
+   * 발주 보드 ↔ 재고 엑셀 간 동일 품목 식별(표시 문자열은 그대로 두고 조회만 정규화).
+   * 전각/호환 한자(NFKC), 제로폭·워드 조인너, 공백·대소문자 차이를 흡수합니다.
+   */
+  function normStockMatch(s) {
+    let t = String(s ?? "");
+    try {
+      t = t.normalize("NFKC");
+    } catch (e) {
+      /* IE 등 미지원 시 원문 유지 */
+    }
+    t = t.replace(/[\u200B-\u200D\uFEFF\u2060]/g, "");
+    return norm(t);
+  }
+
   function matchHeader(header, keys) {
     const h = norm(header);
     for (const k of keys) {
@@ -2096,9 +2126,22 @@
     const stockByKey = new Map();
     /** @type {Map<string, number>} */
     const stockByName = new Map();
+    /** @type {Map<string, number>} */
+    const stockByNormKey = new Map();
+    /** @type {Map<string, number>} */
+    const stockByNormName = new Map();
     /** @type {{ code: string, name: string, stock: number, category: string }[]} */
     const rows = [];
-    const empty = { stockByKey, stockByName, rows, rowCount: 0, headerRowIndex: -1, hasCategoryColumn: false };
+    const empty = {
+      stockByKey,
+      stockByName,
+      stockByNormKey,
+      stockByNormName,
+      rows,
+      rowCount: 0,
+      headerRowIndex: -1,
+      hasCategoryColumn: false,
+    };
     if (!matrix || matrix.length < 2 || hi < 0 || hi >= matrix.length) return empty;
 
     const header = matrix[hi] || [];
@@ -2121,10 +2164,16 @@
       const key = `${code}\t${name}`;
       stockByKey.set(key, (stockByKey.get(key) || 0) + stock);
       if (name) stockByName.set(name, (stockByName.get(name) || 0) + stock);
+      const nk = `${normStockMatch(code)}\t${normStockMatch(name)}`;
+      stockByNormKey.set(nk, (stockByNormKey.get(nk) || 0) + stock);
+      const nn = normStockMatch(name);
+      if (nn) stockByNormName.set(nn, (stockByNormName.get(nn) || 0) + stock);
     }
     return {
       stockByKey,
       stockByName,
+      stockByNormKey,
+      stockByNormName,
       rows,
       rowCount: rows.length,
       headerRowIndex: hi,
@@ -2135,12 +2184,14 @@
   /**
    * 재고 파일(날짜 없음) -> 코드+제품명 매칭용 재고 마스터
    * @param {any[][]} matrix
-   * @returns {{ stockByKey: Map<string, number>, stockByName: Map<string, number>, rows?: { code: string, name: string, stock: number }[], rowCount?: number, headerRowIndex?: number }}
+   * @returns {{ stockByKey: Map<string, number>, stockByName: Map<string, number>, stockByNormKey: Map<string, number>, stockByNormName: Map<string, number>, rows?: { code: string, name: string, stock: number }[], rowCount?: number, headerRowIndex?: number }}
    */
   function extractStockData(matrix) {
     const empty = {
       stockByKey: new Map(),
       stockByName: new Map(),
+      stockByNormKey: new Map(),
+      stockByNormName: new Map(),
       rows: [],
       rowCount: 0,
       headerRowIndex: -1,
@@ -3483,7 +3534,7 @@
    * - 차이수량: 일별 잔량(이월)
    * - 부족품: 일별 부족(음수)
    * @param {NonNullable<typeof lastBoard>} board
-   * @param {{ stockByKey: Map<string, number>, stockByName: Map<string, number> }} stockData
+   * @param {{ stockByKey: Map<string, number>, stockByName: Map<string, number>, stockByNormKey?: Map<string, number>, stockByNormName?: Map<string, number> }} stockData
    */
   function mergeStockDataIntoBoard(board, stockData) {
     if (!stockData) return board;
@@ -3493,11 +3544,21 @@
       keyToPack.set(`${p.code}\t${p.name}`, p);
     });
 
+    const byNormKey = stockData.stockByNormKey || new Map();
+    const byNormName = stockData.stockByNormName || new Map();
+
     for (const pack of board.products) {
       const key = `${pack.code}\t${pack.name}`;
       let stockV = stockData.stockByKey.get(key);
       if (!Number.isFinite(stockV)) {
+        const nKey = `${normStockMatch(pack.code)}\t${normStockMatch(pack.name)}`;
+        stockV = byNormKey.get(nKey);
+      }
+      if (!Number.isFinite(stockV)) {
         stockV = stockData.stockByName.get(pack.name);
+      }
+      if (!Number.isFinite(stockV)) {
+        stockV = byNormName.get(normStockMatch(pack.name));
       }
       if (!Number.isFinite(stockV)) continue;
 
@@ -3523,10 +3584,21 @@
     return board;
   }
 
+  function applyOrderBoardProductNameAliases(board) {
+    if (!board || !board.products || ORDER_BOARD_PRODUCT_NAME_ALIASES.size === 0) return;
+    for (const pack of board.products) {
+      const nm = String(pack.name ?? "").trim();
+      if (!nm) continue;
+      const next = ORDER_BOARD_PRODUCT_NAME_ALIASES.get(nm);
+      if (next) pack.name = next;
+    }
+  }
+
   function applyStockDataToCurrentBoard() {
     if (!lastBoard || !lastStockData) return;
     mergeStockDataIntoBoard(lastBoard, lastStockData);
     alignBoardDates(lastBoard);
+    applyOrderBoardProductNameAliases(lastBoard);
   }
 
   function guessColumnIndex(headerRow) {
@@ -4310,6 +4382,56 @@
     return stock !== 0 || lackN !== 0;
   }
 
+  let orderCalendarNameFitRaf = 0;
+
+  /**
+   * 겹치면 2줄, 아니면 1줄 유지
+   * @param {HTMLElement} rowEl
+   * @param {HTMLElement} nameEl
+   * @param {HTMLElement} numsEl
+   */
+  function applyOrderCalendarRowLineMode(rowEl, nameEl, numsEl) {
+    if (!rowEl || !nameEl || !numsEl || !rowEl.isConnected) return;
+    rowEl.classList.remove("oc-row--two-line");
+    const rowW = rowEl.clientWidth;
+    if (rowW < 8) {
+      rowEl.classList.add("oc-row--two-line");
+      return;
+    }
+    const cs = getComputedStyle(rowEl);
+    const gapRaw = cs.columnGap && cs.columnGap !== "normal" ? cs.columnGap : cs.gap;
+    const gap = Number.isFinite(parseFloat(gapRaw)) ? parseFloat(gapRaw) : 0;
+    const need = nameEl.scrollWidth + numsEl.scrollWidth + gap + 2;
+    if (need > rowW) rowEl.classList.add("oc-row--two-line");
+  }
+
+  function fitOrderCalendarNamesToRowWidth() {
+    document.querySelectorAll(".order-calendar-item").forEach((row) => {
+      const nameEl = row.querySelector(".order-calendar-item-name");
+      const numsEl = row.querySelector(".order-calendar-item-nums");
+      if (nameEl instanceof HTMLElement && numsEl instanceof HTMLElement) {
+        applyOrderCalendarRowLineMode(row, nameEl, numsEl);
+      }
+    });
+    document.querySelectorAll(".order-calendar-month-summary__row").forEach((row) => {
+      const nameEl = row.querySelector(".order-calendar-month-summary__name");
+      const numsEl = row.querySelector(".order-calendar-month-summary__nums");
+      if (nameEl instanceof HTMLElement && numsEl instanceof HTMLElement) {
+        applyOrderCalendarRowLineMode(row, nameEl, numsEl);
+      }
+    });
+  }
+
+  function scheduleFitOrderCalendarNames() {
+    if (orderCalendarNameFitRaf) cancelAnimationFrame(orderCalendarNameFitRaf);
+    orderCalendarNameFitRaf = requestAnimationFrame(() => {
+      orderCalendarNameFitRaf = requestAnimationFrame(() => {
+        fitOrderCalendarNamesToRowWidth();
+        orderCalendarNameFitRaf = 0;
+      });
+    });
+  }
+
   /**
    * 현재 달력 월(y, mo) 기준, 필터된 품목의 발주량 일별 합 → 제품별 합계 블록
    * @param {number} y
@@ -4417,6 +4539,7 @@
     }
     orderCalendarMonthSummary.appendChild(list);
     orderCalendarMonthSummary.hidden = false;
+    scheduleFitOrderCalendarNames();
   }
 
   /**
@@ -4553,6 +4676,7 @@
       cell.appendChild(list);
       orderCalendarGrid.appendChild(cell);
     }
+    scheduleFitOrderCalendarNames();
   }
 
   /**
@@ -4578,7 +4702,7 @@
 
     const thead = document.createElement("thead");
     const trh = document.createElement("tr");
-    const fixedLabels = ["구분", "품목코드", "제품", "타입", "재고", "수출발주량", "부족량"];
+    const fixedLabels = ["구분", "품목코드", "제품", "타입", "재고", "수출발주량"];
     fixedLabels.forEach((label, i) => {
       const th = document.createElement("th");
       th.textContent = label;
@@ -4672,12 +4796,6 @@
         tdE.textContent = formatQty(line.exportCol);
         tdE.className = "sticky-left sticky-c6 col-summary num";
         tr.appendChild(tdE);
-
-        const tdL = document.createElement("td");
-        tdL.textContent = formatQty(line.lackCol);
-        tdL.className = "sticky-left sticky-c7 col-summary num";
-        if (line.lackCol < 0) tdL.classList.add("neg");
-        tr.appendChild(tdL);
 
         visibleDates.forEach((ymd) => {
           const td = document.createElement("td");
@@ -11026,6 +11144,7 @@
       if (workbook) board = mergePastOrderSheetIntoBoard(workbook, board);
       if (lastStockData) board = mergeStockDataIntoBoard(board, lastStockData);
       alignBoardDates(board);
+      applyOrderBoardProductNameAliases(board);
       lastBoard = board;
       onDataReady();
       flashOrderBoardUploadOk();
@@ -11083,6 +11202,7 @@
     if (lastWorkbook) lastBoard = mergePastOrderSheetIntoBoard(lastWorkbook, lastBoard);
     if (lastStockData) lastBoard = mergeStockDataIntoBoard(lastBoard, lastStockData);
     alignBoardDates(lastBoard);
+    applyOrderBoardProductNameAliases(lastBoard);
     onDataReady();
     flashOrderBoardUploadOk();
   }
@@ -11171,14 +11291,14 @@
       }
       const matrix = sheetToMatrix(wb, sheetName);
       const parsed = extractStockData(matrix);
-      if (parsed.stockByKey.size === 0 && parsed.stockByName.size === 0) {
+      if (parsed.rowCount === 0) {
         alert("재고파일에서 품목코드/제품명/재고수량 데이터를 읽지 못했습니다. 헤더를 확인해 주세요.");
         if (stockSheetInfoEl) stockSheetInfoEl.textContent = "";
         renderStockTableView();
         return;
       }
       lastStockData = parsed;
-      const infoLine = `재고 시트: ${sheetName} · ${parsed.rowCount}행 · 품목 ${parsed.stockByKey.size || parsed.stockByName.size}건`;
+      const infoLine = `재고 시트: ${sheetName} · ${parsed.rowCount}행 · 품목 ${parsed.stockByNormName.size || parsed.stockByKey.size || parsed.stockByName.size}건`;
       if (stockSheetInfoEl) stockSheetInfoEl.textContent = infoLine;
       populateStockTableFiltersFromData();
       renderStockTableView();
@@ -12057,12 +12177,19 @@
       requestAnimationFrame(() => {
         applyOrderCalendarPrintFit();
         applyStockTablePrintFit();
+        fitOrderCalendarNamesToRowWidth();
+        requestAnimationFrame(() => fitOrderCalendarNamesToRowWidth());
+        setTimeout(() => fitOrderCalendarNamesToRowWidth(), 120);
       });
     });
   });
   window.addEventListener("afterprint", () => {
     clearOrderCalendarPrintFit();
     clearStockTablePrintFit();
+    scheduleFitOrderCalendarNames();
+  });
+  window.addEventListener("resize", () => {
+    scheduleFitOrderCalendarNames();
   });
 
   navItems.forEach((btn) => {

@@ -3140,7 +3140,7 @@ select {
 .order-calendar-month-summary__row {
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 0.35rem;
   font-size: 0.72rem;
@@ -3159,9 +3159,12 @@ select {
   flex: 1 1 auto;
   min-width: 0;
   font-weight: 600;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
   color: #0f172a;
-  word-break: break-word;
-  hyphens: auto;
 }
 
 .order-calendar-month-summary__qty {
@@ -3230,31 +3233,57 @@ select {
 .order-calendar-item {
   display: flex;
   flex-direction: row;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.2rem;
   font-size: 0.78rem;
   line-height: 1.25;
+  padding: 0.04rem 0 0.12rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.28);
+}
+
+.order-calendar-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 
 .order-calendar-item-name {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  font-size: 0.78rem;
+  line-height: 1.2;
   color: var(--text);
 }
 
 .order-calendar-item-nums {
   display: inline-flex;
   flex: 0 0 auto;
+  margin-left: auto;
   align-items: baseline;
   justify-content: flex-end;
   flex-wrap: nowrap;
   gap: 0.1rem;
   max-width: 46%;
   font-variant-numeric: tabular-nums;
+}
+
+.order-calendar-item.oc-row--two-line,
+.order-calendar-month-summary__row.oc-row--two-line {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0.08rem;
+}
+
+.order-calendar-item.oc-row--two-line .order-calendar-item-nums,
+.order-calendar-month-summary__row.oc-row--two-line .order-calendar-month-summary__nums {
+  margin-left: 0;
+  justify-content: flex-start;
+  max-width: none;
+  text-align: left;
 }
 
 .order-calendar-item-qty {
@@ -4386,9 +4415,9 @@ select {
   body.app-body--print-calendar-only .order-calendar-month-summary__row {
     display: flex !important;
     flex-direction: row !important;
-    align-items: flex-start !important;
+    align-items: center !important;
     justify-content: space-between !important;
-    gap: 1.5mm !important;
+    gap: 1.1mm !important;
     font-size: 8.7pt !important;
     line-height: 1.28 !important;
     padding: 1mm 1.3mm !important;
@@ -4405,9 +4434,12 @@ select {
     flex: 1 1 auto !important;
     min-width: 0 !important;
     font-weight: 600 !important;
+    font-size: 8.8pt !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
     color: #0f172a !important;
-    word-break: break-word !important;
-    hyphens: auto !important;
   }
 
   body.app-body--print-calendar-only .order-calendar-month-summary__qty {
@@ -4420,6 +4452,7 @@ select {
   }
 
   body.app-body--print-calendar-only .order-calendar-month-summary__nums {
+    justify-content: flex-end !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
     gap: 0.6mm !important;
@@ -4522,9 +4555,57 @@ select {
   }
 
   body.app-body--print-calendar-only .order-calendar-item {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
     font-size: 9.6pt !important;
     line-height: 1.25 !important;
     gap: 0.8mm !important;
+    padding: 0.2mm 0 0.5mm !important;
+    border-bottom: 0.3pt solid rgba(148, 163, 184, 0.38) !important;
+  }
+
+  /* 프린트: 제품명 ... 생략 없이 한 줄 전체 표시 */
+  body.app-body--print-calendar-only .order-calendar-item-name {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+    font-size: 8.9pt !important;
+    letter-spacing: -0.01em !important;
+  }
+
+  body.app-body--print-calendar-only .order-calendar-item-nums {
+    margin-left: auto !important;
+    justify-content: flex-end !important;
+    max-width: 46% !important;
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+  }
+
+  body.app-body--print-calendar-only .order-calendar-item.oc-row--two-line,
+  body.app-body--print-calendar-only .order-calendar-month-summary__row.oc-row--two-line {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 0.35mm !important;
+  }
+
+  body.app-body--print-calendar-only .order-calendar-item.oc-row--two-line .order-calendar-item-nums,
+  body.app-body--print-calendar-only
+    .order-calendar-month-summary__row.oc-row--two-line
+    .order-calendar-month-summary__nums {
+    margin-left: 0 !important;
+    justify-content: flex-start !important;
+    max-width: none !important;
+    text-align: left !important;
+  }
+
+  body.app-body--print-calendar-only .order-calendar-item:last-child {
+    border-bottom: 0 !important;
+    padding-bottom: 0 !important;
   }
 
   body.app-body--print-calendar-only .order-calendar-item-qty {
