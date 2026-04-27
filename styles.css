@@ -4246,6 +4246,7 @@ select {
   }
 
   html,
+  body.app-body--print-daily-only,
   body.app-body--print-calendar-only,
   body.app-body--print-stock-only {
     margin: 0 !important;
@@ -4257,6 +4258,62 @@ select {
     overflow: visible !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  body.app-body--print-daily-only .sidebar {
+    display: none !important;
+  }
+
+  body.app-body--print-daily-only .main-wrap {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+  }
+
+  body.app-body--print-daily-only .main-wrap > .km-strip,
+  body.app-body--print-daily-only .main-wrap > section:not(#viewDaily) {
+    display: none !important;
+  }
+
+  body.app-body--print-daily-only #viewDaily {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+  }
+
+  body.app-body--print-daily-only #viewDaily[hidden] {
+    display: block !important;
+  }
+
+  body.app-body--print-daily-only #viewDaily .panel {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #fff !important;
+  }
+
+  body.app-body--print-daily-only #viewDaily .table-wrap {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  body.app-body--print-daily-only #viewDaily .picker-panel,
+  body.app-body--print-daily-only #viewDaily #btnExport {
+    display: none !important;
   }
 
   body.app-body--print-calendar-only .sidebar {

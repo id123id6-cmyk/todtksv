@@ -149,6 +149,7 @@
   const teamProdHwaseungDropzone = document.getElementById("teamProdHwaseungDropzone");
   const teamProdHwaseungFileInput = document.getElementById("teamProdHwaseungFileInput");
   const viewDaily = document.getElementById("viewDaily");
+  const dailyPanel = viewDaily ? viewDaily.querySelector(".panel") : null;
   const viewOrderCalendar = document.getElementById("viewOrderCalendar");
   const viewStockTable = document.getElementById("viewStockTable");
   const stockTableWrap = document.getElementById("stockTableWrap");
@@ -1630,6 +1631,7 @@
     if (viewStockUnitPrice) viewStockUnitPrice.hidden = viewKey !== "stockUnitPrice";
     if (mainWrap) mainWrap.classList.toggle("main-wrap--home", viewKey === "home");
     if (kmStripEl) kmStripEl.hidden = viewKey === "home";
+    document.body.classList.toggle("app-body--print-daily-only", viewKey === "daily");
     document.body.classList.toggle("app-body--print-calendar-only", viewKey === "orderCalendar");
     document.body.classList.toggle("app-body--print-stock-only", viewKey === "stockTable");
     mountDailyFiltersForView(viewKey);
@@ -3356,10 +3358,12 @@
     const byKey = new Map();
     if (!matrix || matrix.length < 2) return { byKey, dates: [] };
 
-    const spec = analyzeWideHeader(matrix[0]);
+    const hi = detectOrderInputHeaderRowIndex(matrix);
+    const headerRow = matrix[hi] || [];
+    const spec = analyzeWideHeader(headerRow);
     if (spec.wide) {
       const dateAcc = new Set();
-      for (let r = 1; r < matrix.length; r++) {
+      for (let r = hi + 1; r < matrix.length; r++) {
         const row = matrix[r];
         if (!row || row.length === 0) continue;
         const rawG = String(row[spec.iGubun] ?? "").trim();
@@ -3382,9 +3386,9 @@
       return { byKey, dates: [...dateAcc].sort() };
     }
 
-    const idx = guessColumnIndex(matrix[0]);
+    const idx = guessColumnIndex(headerRow);
     if (idx.date < 0 || idx.name < 0 || idx.qty < 0) return { byKey, dates: [] };
-    const pivot = buildPivot(matrix, idx);
+    const pivot = buildPivot(matrix, idx, hi);
     if (!pivot) return { byKey, dates: [] };
     for (const pname of pivot.products) {
       const meta = pivot.metaByProduct.get(pname) || { code: "" };
@@ -3886,23 +3890,30 @@
     return Number.isFinite(n) ? n : 0;
   }
 
+  /** 엑셀 1900 날짜 계열(시리얼) → UTC 기준 달력일 (타임존으로 하루 밀리는 것 방지) */
+  function ymdFromExcelSerial(serial) {
+    if (typeof serial !== "number" || !Number.isFinite(serial)) return "";
+    const epochMs = Date.UTC(1899, 11, 30) + serial * 86400000;
+    const d = new Date(epochMs);
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(d.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
   function parseExcelDate(v) {
     if (v instanceof Date && !Number.isNaN(v.getTime())) {
       return formatYmd(v);
     }
     if (typeof v === "number" && v > 20000 && v < 65000) {
-      const epoch = new Date(Date.UTC(1899, 11, 30));
-      const d = new Date(epoch.getTime() + v * 86400000);
-      return formatYmd(d);
+      return ymdFromExcelSerial(v);
     }
     const s = String(v ?? "").trim();
     if (!s) return "";
     if (/^\d{5}(\.\d+)?$/.test(s)) {
       const n = parseFloat(s);
       if (n > 20000 && n < 65000) {
-        const epoch = new Date(Date.UTC(1899, 11, 30));
-        const d = new Date(epoch.getTime() + n * 86400000);
-        return formatYmd(d);
+        return ymdFromExcelSerial(n);
       }
     }
     const d = new Date(s);
@@ -3915,6 +3926,34 @@
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
+  }
+
+  /**
+   * 같은 헤더 행에 `2025-04-27`·엑셀 시리얼 등 연도 힌트가 있으면 `4/27` 같은 짧은 표기에 사용합니다.
+   * @param {any[]} headerRow
+   */
+  function inferShortDateYearFromHeaderRow(headerRow) {
+    const years = [];
+    if (!headerRow || !headerRow.length) return new Date().getFullYear();
+    for (let j = 0; j < headerRow.length; j++) {
+      const cell = headerRow[j];
+      const str = String(cell ?? "").trim();
+      const mFull = str.match(/(\d{4})[./-](\d{1,2})[./-](\d{1,2})/);
+      if (mFull) {
+        const y = parseInt(mFull[1], 10);
+        if (y >= 1990 && y <= 2100) years.push(y);
+      }
+      if (typeof cell === "number" && cell > 35000 && cell < 65000) {
+        const ymd = ymdFromExcelSerial(cell);
+        const y = parseInt(String(ymd).slice(0, 4), 10);
+        if (y >= 1990 && y <= 2100) years.push(y);
+      }
+      if (cell instanceof Date && !Number.isNaN(cell.getTime())) {
+        years.push(cell.getFullYear());
+      }
+    }
+    if (years.length) return Math.max.apply(null, years);
+    return new Date().getFullYear();
   }
 
   /** @param {string} ymd */
@@ -3930,22 +3969,51 @@
     return `${String(mo + 1).padStart(2, "0")}/${String(da).padStart(2, "0")} (${w})`;
   }
 
-  /** @param {string|number|Date} cell */
-  function headerCellToYmd(cell) {
+  /**
+   * @param {string|number|Date} cell
+   * @param {number} [shortYear] `M/D`만 있을 때 연도 (헤더 행에서 추론)
+   */
+  function headerCellToYmd(cell, shortYear) {
+    const y0 = Number.isFinite(shortYear) ? shortYear : new Date().getFullYear();
     if (cell instanceof Date && !Number.isNaN(cell.getTime())) return formatYmd(cell);
-    if (typeof cell === "number" && cell > 25000 && cell < 65000) return parseExcelDate(cell);
+    if (typeof cell === "number" && cell > 35000 && cell < 65000) return ymdFromExcelSerial(cell);
     const str = String(cell ?? "").trim();
     if (!str) return null;
     const mFull = str.match(/(\d{4})[./-](\d{1,2})[./-](\d{1,2})/);
     if (mFull) return `${mFull[1]}-${mFull[2].padStart(2, "0")}-${mFull[3].padStart(2, "0")}`;
     const mShort = str.match(/(\d{1,2})\s*[./]\s*(\d{1,2})/);
     if (mShort) {
-      const y = 2026;
-      return `${y}-${mShort[1].padStart(2, "0")}-${mShort[2].padStart(2, "0")}`;
+      return `${y0}-${mShort[1].padStart(2, "0")}-${mShort[2].padStart(2, "0")}`;
     }
     const tryDate = new Date(str);
     if (!Number.isNaN(tryDate.getTime())) return formatYmd(tryDate);
     return null;
+  }
+
+  /**
+   * 발주서 입력·지난발주서: 제목 행만 있는 경우 등 헤더가 1행이 아닐 수 있음
+   * @param {any[][]} matrix
+   */
+  function detectOrderInputHeaderRowIndex(matrix) {
+    if (!matrix || matrix.length === 0) return 0;
+    const maxScan = Math.min(matrix.length, 15);
+    let best = 0;
+    let bestScore = -Infinity;
+    for (let r = 0; r < maxScan; r++) {
+      const row = matrix[r] || [];
+      const spec = analyzeWideHeader(row);
+      let score = 0;
+      if (spec.wide) score += 500 + spec.dateCols.length * 5;
+      const idx = guessColumnIndex(row);
+      if (idx.date >= 0 && idx.name >= 0 && idx.qty >= 0) score += 200;
+      const nonEmpty = row.filter((c) => String(c ?? "").trim() !== "").length;
+      if (nonEmpty < 3) score -= 80;
+      if (score > bestScore) {
+        bestScore = score;
+        best = r;
+      }
+    }
+    return best;
   }
 
   function isWeekendYmd(ymd) {
@@ -4153,10 +4221,23 @@
     const iExport = findHeaderIndex(headerRow, EXPORT_KEYS);
     const iLack = findHeaderIndex(headerRow, LACK_KEYS);
 
+    const shortYear = inferShortDateYearFromHeaderRow(headerRow);
+    const metaEnd = Math.max(
+      -1,
+      iGubun >= 0 ? iGubun : -1,
+      iCode >= 0 ? iCode : -1,
+      iName >= 0 ? iName : -1,
+      iType >= 0 ? iType : -1,
+      iStock >= 0 ? iStock : -1,
+      iExport >= 0 ? iExport : -1,
+      iLack >= 0 ? iLack : -1
+    );
+
     /** @type {{ idx: number, ymd: string }[]} */
     const dateCols = [];
-    for (let j = 0; j < headerRow.length; j++) {
-      const ymd = headerCellToYmd(headerRow[j]);
+    const scanFrom = metaEnd + 1;
+    for (let j = Math.max(0, scanFrom); j < headerRow.length; j++) {
+      const ymd = headerCellToYmd(headerRow[j], shortYear);
       if (ymd) dateCols.push({ idx: j, ymd });
     }
 
@@ -4169,12 +4250,13 @@
    * @param {any[][]} matrix
    * @param {ReturnType<typeof analyzeWideHeader>} spec
    */
-  function buildBoardFromWide(matrix, spec) {
+  function buildBoardFromWide(matrix, spec, headerRowIndex) {
+    const hi = Number.isInteger(headerRowIndex) && headerRowIndex >= 0 ? headerRowIndex : 0;
     /** @type {Map<string, { code: string, name: string, type: string, order: number, rows: Map<string, { dates: Map<string, number>, stock: number, exportCol: number, lackCol: number }> }>} */
     const products = new Map();
     let seq = 0;
 
-    for (let r = 1; r < matrix.length; r++) {
+    for (let r = hi + 1; r < matrix.length; r++) {
       const row = matrix[r];
       if (!row || row.length === 0) continue;
       const code = spec.iCode >= 0 ? String(row[spec.iCode] ?? "").trim() : "";
@@ -4219,13 +4301,14 @@
     return { mode: "wide", dates, products: list, spec };
   }
 
-  function buildPivot(matrix, idx) {
+  function buildPivot(matrix, idx, headerRowIndex) {
     if (idx.date < 0 || idx.name < 0 || idx.qty < 0) return null;
+    const hi = Number.isInteger(headerRowIndex) && headerRowIndex >= 0 ? headerRowIndex : 0;
 
     const byDate = new Map();
     const metaByProduct = new Map();
 
-    for (let r = 1; r < matrix.length; r++) {
+    for (let r = hi + 1; r < matrix.length; r++) {
       const row = matrix[r];
       if (!row || row.length === 0) continue;
       const dateStr = parseExcelDate(row[idx.date]);
@@ -11129,13 +11212,14 @@
       return;
     }
     rawRows = matrix;
-    headers = matrix[0].map((c, i) => String(c ?? "").trim() || `열 ${i + 1}`);
-    const wideSpec = analyzeWideHeader(matrix[0]);
+    const hi = detectOrderInputHeaderRowIndex(matrix);
+    headers = (matrix[hi] || []).map((c, i) => String(c ?? "").trim() || `열 ${i + 1}`);
+    const wideSpec = analyzeWideHeader(matrix[hi] || []);
 
     if (wideSpec.wide) {
       dataMode = "wide";
       if (mappingBlock) mappingBlock.hidden = true;
-      let board = buildBoardFromWide(matrix, wideSpec);
+      let board = buildBoardFromWide(matrix, wideSpec, hi);
       if (board.products.length === 0) {
         alert("「발주서 입력」 시트에서 구분·품목코드·제품·날짜 열이 있는지 확인하세요.");
         clearOutputs();
@@ -11177,7 +11261,8 @@
   function applyMapping() {
     if (!rawRows || dataMode !== "long") return;
     const idx = readIndices();
-    const pivot = buildPivot(rawRows, idx);
+    const hi = detectOrderInputHeaderRowIndex(rawRows);
+    const pivot = buildPivot(rawRows, idx, hi);
     if (!pivot || pivot.dates.length === 0) {
       alert("날짜·제품명·발주량 열을 올바르게 지정했는지 확인하세요.");
       if (mappingBlock) mappingBlock.hidden = false;
@@ -12103,6 +12188,11 @@
     orderCalendarPanel.style.removeProperty("zoom");
   }
 
+  function clearDailyPrintFit() {
+    if (!dailyPanel) return;
+    dailyPanel.style.removeProperty("zoom");
+  }
+
   /** 1mm → px (@page margin 과 동일한 mm 기준) */
   let orderCalendarCssMmToPxCache = null;
   function orderCalendarCssMmToPx(mm) {
@@ -12144,6 +12234,29 @@
     }
   }
 
+  /** A3 가로 인쇄 영역(420−10)mm × (297−10)mm — 넘칠 때만 zoom */
+  function applyDailyPrintFit() {
+    clearDailyPrintFit();
+    if (!document.body.classList.contains("app-body--print-daily-only")) return;
+    if (!dailyPanel || (viewDaily && viewDaily.hidden)) return;
+
+    const marginMm = 5;
+    const targetW = orderCalendarCssMmToPx(420 - 2 * marginMm);
+    const targetH = orderCalendarCssMmToPx(297 - 2 * marginMm);
+    if (targetW < 2 || targetH < 2) return;
+
+    const w = dailyPanel.scrollWidth;
+    const h = dailyPanel.scrollHeight;
+    if (w < 1 || h < 1) return;
+
+    const scale = Math.min(targetW / w, targetH / h, 1);
+    if (scale >= 1) return;
+
+    if (typeof CSS !== "undefined" && CSS.supports && CSS.supports("zoom", "1")) {
+      dailyPanel.style.zoom = String(scale);
+    }
+  }
+
   function clearStockTablePrintFit() {
     if (!stockTablePanel) return;
     stockTablePanel.style.removeProperty("zoom");
@@ -12175,6 +12288,7 @@
   window.addEventListener("beforeprint", () => {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
+        applyDailyPrintFit();
         applyOrderCalendarPrintFit();
         applyStockTablePrintFit();
         fitOrderCalendarNamesToRowWidth();
@@ -12184,6 +12298,7 @@
     });
   });
   window.addEventListener("afterprint", () => {
+    clearDailyPrintFit();
     clearOrderCalendarPrintFit();
     clearStockTablePrintFit();
     scheduleFitOrderCalendarNames();
