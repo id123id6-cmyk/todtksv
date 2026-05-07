@@ -150,6 +150,10 @@
   const teamProdHwaseungFileInput = document.getElementById("teamProdHwaseungFileInput");
   const viewDaily = document.getElementById("viewDaily");
   const dailyPanel = viewDaily ? viewDaily.querySelector(".panel") : null;
+  const viewDailyPrintTranspose = document.getElementById("viewDailyPrintTranspose");
+  const dailyPrintTableWrap = document.getElementById("dailyPrintTableWrap");
+  const dailyFiltersSlotPrint = document.getElementById("dailyFiltersSlotPrint");
+  const dailyPrintTeamHint = document.getElementById("dailyPrintTeamHint");
   const viewOrderCalendar = document.getElementById("viewOrderCalendar");
   const viewStockTable = document.getElementById("viewStockTable");
   const stockTableWrap = document.getElementById("stockTableWrap");
@@ -1573,6 +1577,10 @@
       dailyTeamHint.textContent = segText;
       dailyTeamHint.hidden = !drawingTeamSegment;
     }
+    if (dailyPrintTeamHint) {
+      dailyPrintTeamHint.textContent = segText;
+      dailyPrintTeamHint.hidden = !drawingTeamSegment;
+    }
     if (orderCalTeamHint) {
       orderCalTeamHint.textContent = segText;
       orderCalTeamHint.hidden = !drawingTeamSegment;
@@ -1597,6 +1605,8 @@
     if (!dailyFilters || !dailyFiltersSlotDaily || !dailyFiltersSlotCalendar) return;
     if (viewKey === "orderCalendar") {
       dailyFiltersSlotCalendar.appendChild(dailyFilters);
+    } else if (viewKey === "dailyPrintTranspose" && dailyFiltersSlotPrint) {
+      dailyFiltersSlotPrint.appendChild(dailyFilters);
     } else {
       dailyFiltersSlotDaily.appendChild(dailyFilters);
     }
@@ -1609,15 +1619,16 @@
   function setView(viewKey, opts) {
     const o = opts || {};
     currentView = viewKey;
-    if ((viewKey === "daily" || viewKey === "orderCalendar") && o.teamSegment !== undefined) {
+    if ((viewKey === "daily" || viewKey === "orderCalendar" || viewKey === "dailyPrintTranspose") && o.teamSegment !== undefined) {
       setDrawingTeamSegment(o.teamSegment || "");
-    } else if (viewKey !== "daily" && viewKey !== "orderCalendar") {
+    } else if (viewKey !== "daily" && viewKey !== "orderCalendar" && viewKey !== "dailyPrintTranspose") {
       setDrawingTeamSegment("");
     }
     if (viewHome) viewHome.hidden = viewKey !== "home";
     viewUpload.hidden = viewKey !== "upload";
     if (viewTeamProductionUpload) viewTeamProductionUpload.hidden = viewKey !== "teamProductionUpload";
     viewDaily.hidden = viewKey !== "daily";
+    if (viewDailyPrintTranspose) viewDailyPrintTranspose.hidden = viewKey !== "dailyPrintTranspose";
     if (viewOrderCalendar) viewOrderCalendar.hidden = viewKey !== "orderCalendar";
     if (viewStockTable) viewStockTable.hidden = viewKey !== "stockTable";
     viewSimple.hidden = viewKey !== "simple";
@@ -1632,6 +1643,7 @@
     if (mainWrap) mainWrap.classList.toggle("main-wrap--home", viewKey === "home");
     if (kmStripEl) kmStripEl.hidden = viewKey === "home";
     document.body.classList.toggle("app-body--print-daily-only", viewKey === "daily");
+    document.body.classList.toggle("app-body--print-daily-transpose-only", viewKey === "dailyPrintTranspose");
     document.body.classList.toggle("app-body--print-calendar-only", viewKey === "orderCalendar");
     document.body.classList.toggle("app-body--print-stock-only", viewKey === "stockTable");
     mountDailyFiltersForView(viewKey);
@@ -1665,6 +1677,8 @@
     else if (lastBoard && (v === "daily" || v === "simple")) {
       renderBoard(lastBoard);
       renderSimpleTable(lastBoard);
+    } else if (lastBoard && v === "dailyPrintTranspose") {
+      renderDailyPrintTranspose(lastBoard);
     } else if (lastBoard && v === "orderCalendar") {
       renderOrderCalendar(lastBoard);
     }
@@ -1813,48 +1827,52 @@
     const q = norm(st.search.value || "");
     const filtered = st.options.filter((v) => norm(v).includes(q));
     st.list.innerHTML = "";
+    // 검색 결과가 1개면 '전체(검색 목록)'과 그 한 줄이 항상 같은 상태라 둘 다 체크로 보임 → 행 생략
+    const hideSearchAllRow = Boolean(q && filtered.length === 1);
 
-    const allRow = document.createElement("label");
-    allRow.className = "picker-option";
-    const allCb = document.createElement("input");
-    allCb.type = "checkbox";
-    if (q) {
-      const allFilteredOn =
-        filtered.length > 0 && filtered.every((v) => st.selected.has(v));
-      const someFilteredOn = filtered.some((v) => st.selected.has(v));
-      allCb.checked = allFilteredOn;
-      allCb.indeterminate = !allFilteredOn && someFilteredOn;
-    } else {
-      allCb.checked = st.selected.size === st.options.length && st.options.length > 0;
-      allCb.indeterminate = st.selected.size > 0 && st.selected.size < st.options.length;
-    }
-    allCb.addEventListener("change", () => {
-      if (allCb.checked) {
-        if (q) st.selected = new Set(filtered);
-        else st.selected = new Set(st.options);
-      } else if (q) filtered.forEach((v) => st.selected.delete(v));
-      else st.selected.clear();
-      renderPickerList(key);
-      updatePickerButton(key);
-      if (lastBoard) {
-        renderBoard(lastBoard);
-        renderSimpleTable(lastBoard);
+    if (!hideSearchAllRow) {
+      const allRow = document.createElement("label");
+      allRow.className = "picker-option";
+      const allCb = document.createElement("input");
+      allCb.type = "checkbox";
+      if (q) {
+        const allFilteredOn =
+          filtered.length > 0 && filtered.every((v) => st.selected.has(v));
+        const someFilteredOn = filtered.some((v) => st.selected.has(v));
+        allCb.checked = allFilteredOn;
+        allCb.indeterminate = !allFilteredOn && someFilteredOn;
+      } else {
+        allCb.checked = st.selected.size === st.options.length && st.options.length > 0;
+        allCb.indeterminate = st.selected.size > 0 && st.selected.size < st.options.length;
       }
-    });
-    const allTx = document.createElement("span");
-    allTx.textContent = q ? "전체(검색 목록)" : "전체";
-    if (q) allRow.title = "검색으로 보이는 항목만 모두 선택합니다. (엑셀 필터와 같이 좁힙니다.)";
-    allRow.appendChild(allCb);
-    allRow.appendChild(allTx);
-    st.list.appendChild(allRow);
+      allCb.addEventListener("change", () => {
+        if (allCb.checked) {
+          if (q) st.selected = new Set(filtered);
+          else st.selected = new Set(st.options);
+        } else if (q) filtered.forEach((v) => st.selected.delete(v));
+        else st.selected.clear();
+        renderPickerList(key);
+        updatePickerButton(key);
+        if (lastBoard) {
+          renderBoard(lastBoard);
+          renderSimpleTable(lastBoard);
+        }
+      });
+      const allTx = document.createElement("span");
+      allTx.textContent = q ? "전체(검색 목록)" : "전체";
+      if (q) allRow.title = "검색으로 보이는 항목만 모두 선택합니다. (엑셀 필터와 같이 좁힙니다.)";
+      allRow.appendChild(allCb);
+      allRow.appendChild(allTx);
+      st.list.appendChild(allRow);
 
-    if (filtered.length === 0) {
-      allCb.disabled = true;
-      const em = document.createElement("div");
-      em.className = "picker-empty";
-      em.textContent = "검색 결과 없음";
-      st.list.appendChild(em);
-      return;
+      if (filtered.length === 0) {
+        allCb.disabled = true;
+        const em = document.createElement("div");
+        em.className = "picker-empty";
+        em.textContent = "검색 결과 없음";
+        st.list.appendChild(em);
+        return;
+      }
     }
 
     filtered.forEach((v) => {
@@ -1864,8 +1882,11 @@
       cb.type = "checkbox";
       cb.checked = st.selected.has(v);
       cb.addEventListener("change", () => {
-        if (cb.checked) st.selected.add(v);
-        else st.selected.delete(v);
+        if (cb.checked) {
+          // 검색 결과가 하나일 때는 '추가'가 아니라 그 항목만 선택(전체 224개로 맞춰지는 현상 방지)
+          if (q && filtered.length === 1) st.selected = new Set([v]);
+          else st.selected.add(v);
+        } else st.selected.delete(v);
         updatePickerButton(key);
         renderPickerList(key);
         if (lastBoard) {
@@ -2288,45 +2309,48 @@
     const q = norm(st.search.value || "");
     const filtered = st.options.filter((v) => norm(stockUnitPriceCodeLabel(v)).includes(q) || norm(v).includes(q));
     st.list.innerHTML = "";
+    const hideSearchAllRow = Boolean(q && filtered.length === 1);
 
-    const allRow = document.createElement("label");
-    allRow.className = "picker-option";
-    const allCb = document.createElement("input");
-    allCb.type = "checkbox";
-    if (q) {
-      const allFilteredOn =
-        filtered.length > 0 && filtered.every((v) => st.selected.has(v));
-      const someFilteredOn = filtered.some((v) => st.selected.has(v));
-      allCb.checked = allFilteredOn;
-      allCb.indeterminate = !allFilteredOn && someFilteredOn;
-    } else {
-      allCb.checked = st.selected.size === st.options.length && st.options.length > 0;
-      allCb.indeterminate = st.selected.size > 0 && st.selected.size < st.options.length;
-    }
-    allCb.addEventListener("change", () => {
-      if (allCb.checked) {
-        if (q) st.selected = new Set(filtered);
-        else st.selected = new Set(st.options);
-      } else if (q) filtered.forEach((v) => st.selected.delete(v));
-      else st.selected.clear();
-      renderStockUnitPriceCodePickerList();
-      updateStockUnitPriceCodeFilterButton();
-      renderStockUnitPricePreviewTable();
-    });
-    const allTx = document.createElement("span");
-    allTx.textContent = q ? "전체(검색 목록)" : "전체";
-    if (q) allRow.title = "검색으로 보이는 품목코드만 모두 선택합니다.";
-    allRow.appendChild(allCb);
-    allRow.appendChild(allTx);
-    st.list.appendChild(allRow);
+    if (!hideSearchAllRow) {
+      const allRow = document.createElement("label");
+      allRow.className = "picker-option";
+      const allCb = document.createElement("input");
+      allCb.type = "checkbox";
+      if (q) {
+        const allFilteredOn =
+          filtered.length > 0 && filtered.every((v) => st.selected.has(v));
+        const someFilteredOn = filtered.some((v) => st.selected.has(v));
+        allCb.checked = allFilteredOn;
+        allCb.indeterminate = !allFilteredOn && someFilteredOn;
+      } else {
+        allCb.checked = st.selected.size === st.options.length && st.options.length > 0;
+        allCb.indeterminate = st.selected.size > 0 && st.selected.size < st.options.length;
+      }
+      allCb.addEventListener("change", () => {
+        if (allCb.checked) {
+          if (q) st.selected = new Set(filtered);
+          else st.selected = new Set(st.options);
+        } else if (q) filtered.forEach((v) => st.selected.delete(v));
+        else st.selected.clear();
+        renderStockUnitPriceCodePickerList();
+        updateStockUnitPriceCodeFilterButton();
+        renderStockUnitPricePreviewTable();
+      });
+      const allTx = document.createElement("span");
+      allTx.textContent = q ? "전체(검색 목록)" : "전체";
+      if (q) allRow.title = "검색으로 보이는 품목코드만 모두 선택합니다.";
+      allRow.appendChild(allCb);
+      allRow.appendChild(allTx);
+      st.list.appendChild(allRow);
 
-    if (filtered.length === 0) {
-      allCb.disabled = true;
-      const em = document.createElement("div");
-      em.className = "picker-empty";
-      em.textContent = "검색 결과 없음";
-      st.list.appendChild(em);
-      return;
+      if (filtered.length === 0) {
+        allCb.disabled = true;
+        const em = document.createElement("div");
+        em.className = "picker-empty";
+        em.textContent = "검색 결과 없음";
+        st.list.appendChild(em);
+        return;
+      }
     }
 
     filtered.forEach((v) => {
@@ -2336,8 +2360,10 @@
       cb.type = "checkbox";
       cb.checked = st.selected.has(v);
       cb.addEventListener("change", () => {
-        if (cb.checked) st.selected.add(v);
-        else st.selected.delete(v);
+        if (cb.checked) {
+          if (q && filtered.length === 1) st.selected = new Set([v]);
+          else st.selected.add(v);
+        } else st.selected.delete(v);
         updateStockUnitPriceCodeFilterButton();
         renderStockUnitPriceCodePickerList();
         renderStockUnitPricePreviewTable();
@@ -3452,10 +3478,22 @@
     }
   }
 
+  /**
+   * 「프린트·날짜가로」는 40일 창의 평일을 모두 열로 쓰는데, 엑셀 헤더에 없는 날은 board.dates에 없었다.
+   * 그 경우 line.dates에 키가 없어 발주·부족이 0으로만 보이므로, 정렬·재고 누적용 날짜는 창과 합친다.
+   * @param {NonNullable<typeof lastBoard>} board
+   */
+  function getExtendedBoardAlignDates(board) {
+    if (!board || !board.dates || board.dates.length === 0) return board?.dates || [];
+    const transposeWeekdays = getDailyVisibleDates(board.dates, { windowDays: 40 }).filter((ymd) => !isWeekendYmd(ymd));
+    return [...new Set([...board.dates, ...transposeWeekdays])].sort();
+  }
+
   function alignBoardDates(board) {
+    const dates = getExtendedBoardAlignDates(board);
     for (const pack of board.products) {
-      ensureProductSubRows(pack, board.dates);
-      recalcDiffFromPast(pack, board.dates);
+      ensureProductSubRows(pack, dates);
+      recalcDiffFromPast(pack, dates);
       recalcExportCols(pack);
     }
   }
@@ -3566,7 +3604,8 @@
       }
       if (!Number.isFinite(stockV)) continue;
 
-      ensureProductSubRows(pack, board.dates);
+      const alignDates = getExtendedBoardAlignDates(board);
+      ensureProductSubRows(pack, alignDates);
 
       for (const sub of SUB_ROWS) {
         const line = pack.rows.get(sub);
@@ -3578,7 +3617,7 @@
       if (!orderLine || !lackLine) continue;
 
       let running = stockV;
-      for (const d of board.dates) {
+      for (const d of alignDates) {
         const order = parseNumber(orderLine.dates.get(d) ?? 0);
         // 차이수량은 지난발주 증감으로 계산하므로 재고 머지에서는 건드리지 않는다.
         running = running - order;
@@ -3970,6 +4009,26 @@
   }
 
   /**
+   * 전치 표 날짜 열 헤더: 1줄 MM/DD · 2줄 (요일) — 한 줄로 합쳐지지 않게 고정
+   * @param {string} ymd
+   * @returns {{ date: string, dow: string }}
+   */
+  function ymdToTransposeHeadLines(ymd) {
+    const p = String(ymd).split("-");
+    if (p.length !== 3) return { date: String(ymd), dow: "" };
+    const y = parseInt(p[0], 10);
+    const mo = parseInt(p[1], 10) - 1;
+    const da = parseInt(p[2], 10);
+    const d = new Date(y, mo, da);
+    if (Number.isNaN(d.getTime())) return { date: String(ymd), dow: "" };
+    const w = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
+    return {
+      date: `${String(mo + 1).padStart(2, "0")}/${String(da).padStart(2, "0")}`,
+      dow: `(${w})`,
+    };
+  }
+
+  /**
    * @param {string|number|Date} cell
    * @param {number} [shortYear] `M/D`만 있을 때 연도 (헤더 행에서 추론)
    */
@@ -4030,13 +4089,22 @@
    * 범위 내 날짜가 있으면 연속 일자(토/일 포함)를 모두 만든다.
    * 범위 내 날짜가 없으면 기존 데이터 구간(min~max)의 연속 일자를 만든다.
    * @param {string[]} dates
+   * @param {{ windowDays?: number }} [opts] `windowDays` 지정 시 끝나는 날 = 오늘 + (일수−1) (프린트 전치 등 전용)
    */
-  function getDailyVisibleDates(dates) {
+  function getDailyVisibleDates(dates, opts) {
+    const o = opts || {};
+    const windowDays = o.windowDays;
     if (!dates || dates.length === 0) return [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const end = new Date(today);
-    end.setMonth(end.getMonth() + 1);
+    let end;
+    if (Number.isFinite(windowDays) && windowDays >= 1) {
+      end = new Date(today);
+      end.setDate(end.getDate() + Math.floor(windowDays) - 1);
+    } else {
+      end = new Date(today);
+      end.setMonth(end.getMonth() + 1);
+    }
 
     /**
      * @param {Date} start
@@ -4073,7 +4141,11 @@
     const minD = parsed[0];
     const maxD = parsed[parsed.length - 1];
     if (!minD || !maxD) return dates;
-    return buildContinuousDates(minD, maxD);
+    const cont = buildContinuousDates(minD, maxD);
+    if (Number.isFinite(windowDays) && windowDays >= 1 && cont.length > windowDays) {
+      return cont.slice(0, windowDays);
+    }
+    return cont;
   }
 
   function normalizeGubun(raw) {
@@ -4913,6 +4985,412 @@
         : `0건`;
     btnExport.disabled = totalProd === 0 || nRows === 0;
     if (currentView === "orderCalendar") renderOrderCalendar(board);
+    if (currentView === "dailyPrintTranspose") renderDailyPrintTranspose(board);
+  }
+
+  function renderDailyPrintTranspose(board) {
+    if (!dailyPrintTableWrap) return;
+    dailyPrintTableWrap.innerHTML = "";
+
+    if (!board || board.products.length === 0) {
+      const d = document.createElement("div");
+      d.className = "empty-state";
+      d.textContent = "발주서 엑셀 업로드에서 파일을 먼저 넣어 주세요.";
+      dailyPrintTableWrap.appendChild(d);
+      return;
+    }
+
+    /* 이 화면만: 약 40일 + 토·일 제외 — 일별 통합표는 기존 한 달 로직 유지 */
+    const visibleDates = getDailyVisibleDates(board.dates, { windowDays: 40 }).filter((ymd) => !isWeekendYmd(ymd));
+    const packs = getFilteredProductPacks(board);
+    const subs = getFilteredSubs();
+    const exportSet = filterState.export.selected;
+    const exportAll = exportSet.size === filterState.export.options.length;
+
+    /** @type {{ pack: any, baseLine: any }[]} */
+    const visiblePacks = [];
+    for (const pack of packs) {
+      const baseLine =
+        pack.rows.get("발주량") ||
+        pack.rows.get("지난발주") ||
+        pack.rows.get("차이수량") ||
+        pack.rows.get("부족품") ||
+        { dates: new Map(), stock: 0, exportCol: 0, lackCol: 0 };
+      const exportKey = String(Number(baseLine.exportCol || 0));
+      if (!exportAll && !exportSet.has(exportKey)) continue;
+      visiblePacks.push({ pack, baseLine });
+    }
+
+    const table = document.createElement("table");
+    table.className = "board-table board-table--transpose";
+
+    let dateColPx = Math.round((74 * 2) / 3);
+    try {
+      const savedD = localStorage.getItem("dailyPrintTranspose:dateColUniform");
+      if (savedD && /^\d+$/.test(savedD)) {
+        dateColPx = Math.max(28, Math.min(120, Number(savedD)));
+      } else {
+        const savedP = localStorage.getItem("dailyPrintTranspose:productColUniform");
+        if (savedP && /^\d+$/.test(savedP)) {
+          dateColPx = Math.max(28, Math.min(120, Number(savedP)));
+          localStorage.setItem("dailyPrintTranspose:dateColUniform", String(dateColPx));
+        } else {
+          const legacy = localStorage.getItem("dailyPrintTranspose:colUniform");
+          if (legacy && /^\d+$/.test(legacy)) {
+            dateColPx = Math.max(28, Math.min(120, Math.round((Number(legacy) * 2) / 3)));
+            localStorage.setItem("dailyPrintTranspose:dateColUniform", String(dateColPx));
+            localStorage.removeItem("dailyPrintTranspose:colUniform");
+          }
+        }
+      }
+    } catch (_) {
+      /* noop */
+    }
+    table.style.setProperty("--transpose-gubun-col-px", "58px");
+    table.style.setProperty("--transpose-name-col-px", "118px");
+    table.style.setProperty("--transpose-date-col-px", `${dateColPx}px`);
+
+    const colgroup = document.createElement("colgroup");
+    const colG = document.createElement("col");
+    colG.className = "transpose-col--gubun";
+    colgroup.appendChild(colG);
+    const colN = document.createElement("col");
+    colN.className = "transpose-col--name";
+    colgroup.appendChild(colN);
+    for (let i = 0; i < visibleDates.length; i++) {
+      const c = document.createElement("col");
+      c.className = "transpose-col--date";
+      colgroup.appendChild(c);
+    }
+    table.appendChild(colgroup);
+
+    const thead = document.createElement("thead");
+    const trh = document.createElement("tr");
+    const thG = document.createElement("th");
+    thG.textContent = "구분";
+    thG.className = "transpose-col--gubun";
+    trh.appendChild(thG);
+    const thN = document.createElement("th");
+    thN.textContent = "제품";
+    thN.className = "transpose-col--name";
+    trh.appendChild(thN);
+
+    for (const ymd of visibleDates) {
+      const th = document.createElement("th");
+      th.className = "transpose-date-th transpose-col--date";
+      th.dataset.ymd = ymd;
+      th.dataset.colkey = `date:${ymd}`;
+      const wrap = document.createElement("div");
+      wrap.className = "transpose-date-th__wrap";
+      const lab = document.createElement("div");
+      lab.className = "transpose-date-head__text";
+      const { date: headDate, dow: headDow } = ymdToTransposeHeadLines(ymd);
+      lab.textContent = "";
+      lab.appendChild(document.createTextNode(headDate));
+      if (headDow) {
+        lab.appendChild(document.createElement("br"));
+        lab.appendChild(document.createTextNode(headDow));
+      }
+      lab.title = ymdToDisplay(ymd);
+      wrap.appendChild(lab);
+      th.appendChild(wrap);
+      trh.appendChild(th);
+    }
+    thead.appendChild(trh);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    if (!visibleDates.length || !visiblePacks.length || !subs.length) {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 2 + visibleDates.length;
+      td.className = "empty-filter-msg";
+      td.textContent = "조건에 맞는 품목이 없습니다. 필터를 바꿔 보세요.";
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+    } else {
+      for (const { pack } of visiblePacks) {
+        for (let si = 0; si < subs.length; si++) {
+          const sub = subs[si];
+          const tr = document.createElement("tr");
+          tr.className = "transpose-row";
+          if (si === 0) tr.classList.add("transpose-row--pack-start");
+          if (si === subs.length - 1) tr.classList.add("transpose-row--pack-end");
+
+          const tdG = document.createElement("td");
+          tdG.className = "transpose-td-gubun transpose-col--gubun";
+          tdG.textContent = sub;
+          tr.appendChild(tdG);
+
+          const tdN = document.createElement("td");
+          tdN.className = "transpose-td-name transpose-col--name";
+          tdN.textContent = `${pack.name || ""}`.trim() || "—";
+          tr.appendChild(tdN);
+
+          for (const ymd of visibleDates) {
+            const line =
+              pack.rows.get(sub) ||
+              ({
+                dates: new Map(),
+                stock: 0,
+                exportCol: 0,
+                lackCol: 0,
+              });
+            const v = line.dates.get(ymd) ?? 0;
+            const td = document.createElement("td");
+            td.className = "num transpose-col--date";
+            if (sub === "차이수량" && v !== 0) {
+              const mark = v > 0 ? "↑" : "↓";
+              td.innerHTML = `<span class="diff-arrow ${v > 0 ? "up" : "down"}">${mark}</span> <span class="diff-value">${formatQty(
+                Math.abs(v)
+              )}</span>`;
+              td.classList.add("cell-diff", v > 0 ? "cell-diff-up" : "cell-diff-down");
+            } else {
+              td.textContent = formatQty(v);
+            }
+            if (v === 0) td.classList.add("zero");
+            if ((sub === "지난발주" || sub === "발주량") && v > 0) td.classList.add("cell-order");
+            if (sub === "부족품" && v < 0) td.classList.add("cell-short");
+            tr.appendChild(td);
+          }
+
+          tbody.appendChild(tr);
+        }
+      }
+    }
+
+    table.appendChild(tbody);
+    dailyPrintTableWrap.appendChild(table);
+
+    setupTransposeUniformColumnResize(table);
+    scheduleFitTransposeTypography(table);
+  }
+
+  let transposeFitRaf = 0;
+  /** @type {number} */
+  let transposeFitIdleId = 0;
+  /** @type {"none" | "idle" | "timeout"} */
+  let transposeFitIdleKind = "none";
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  let transposeResizeDebounce = null;
+
+  function scheduleFitTransposeTypography(table) {
+    if (!table) return;
+    if (transposeFitRaf) cancelAnimationFrame(transposeFitRaf);
+    if (transposeFitIdleKind === "idle" && typeof cancelIdleCallback !== "undefined") {
+      cancelIdleCallback(transposeFitIdleId);
+    } else if (transposeFitIdleKind === "timeout") {
+      clearTimeout(transposeFitIdleId);
+    }
+    transposeFitIdleKind = "none";
+    transposeFitIdleId = 0;
+
+    transposeFitRaf = requestAnimationFrame(() => {
+      transposeFitRaf = 0;
+      const run = () => {
+        transposeFitIdleKind = "none";
+        transposeFitIdleId = 0;
+        fitTransposeTypography(table);
+      };
+      if (typeof requestIdleCallback !== "undefined") {
+        transposeFitIdleKind = "idle";
+        transposeFitIdleId = requestIdleCallback(run, { timeout: 400 });
+      } else {
+        transposeFitIdleKind = "timeout";
+        transposeFitIdleId = setTimeout(run, 0);
+      }
+    });
+  }
+
+  function fitTransposeTypography(table) {
+    if (!table || !table.classList.contains("board-table--transpose")) return;
+
+    /** 날짜 열 폭이 동일하므로 날짜 헤더·숫자 모두 이진 탐색으로 레이아웃 횟수 최소화 */
+    const titleLineHeight = 1.18;
+    const titleMaxLines = 2;
+    const titleMinPx = 7.5;
+    const titleMaxPx = 11;
+    const titleEls = Array.from(table.querySelectorAll("thead th.transpose-date-th .transpose-date-head__text"));
+    const packThs = Array.from(table.querySelectorAll("thead th.transpose-date-th"));
+    if (titleEls.length && packThs.length) {
+      const maxW = Math.max(0, packThs[0].clientWidth - 4);
+      if (maxW >= 8) {
+        for (const el of titleEls) {
+          el.style.fontSize = "";
+          el.style.lineHeight = String(titleLineHeight);
+          el.style.display = "block";
+          el.style.overflow = "hidden";
+          el.style.maxWidth = `${maxW}px`;
+          el.style.whiteSpace = "normal";
+        }
+        let lo = titleMinPx;
+        let hi = titleMaxPx;
+        for (let iter = 0; iter < 14; iter++) {
+          const mid = (lo + hi) / 2;
+          const maxHn = mid * titleLineHeight * titleMaxLines + 2;
+          for (const el of titleEls) {
+            el.style.fontSize = `${mid}px`;
+            el.style.maxHeight = `${maxHn}px`;
+          }
+          void table.offsetHeight;
+          let over = false;
+          for (const el of titleEls) {
+            if (el.scrollHeight > maxHn + 0.5 || el.scrollWidth > maxW + 1) {
+              over = true;
+              break;
+            }
+          }
+          if (over) hi = mid;
+          else lo = mid;
+        }
+        let best = Math.max(titleMinPx, lo);
+        const maxHbest = best * titleLineHeight * titleMaxLines + 2;
+        for (const el of titleEls) {
+          el.style.fontSize = `${best}px`;
+          el.style.maxHeight = `${maxHbest}px`;
+        }
+        void table.offsetHeight;
+        for (const el of titleEls) {
+          if (el.scrollHeight > maxHbest + 1 || el.scrollWidth > maxW + 1) {
+            best = 6.5;
+            break;
+          }
+        }
+        for (const el of titleEls) {
+          el.style.display = "";
+          el.style.webkitLineClamp = "";
+          el.style.maxHeight = "";
+          el.style.maxWidth = "";
+          el.style.overflow = "";
+          el.style.lineHeight = "";
+          el.style.whiteSpace = "";
+          el.style.fontSize = `${best}px`;
+        }
+      }
+    }
+
+    const numTds = Array.from(table.querySelectorAll("tbody td.num"));
+    if (!numTds.length) return;
+    for (const td of numTds) {
+      td.style.fontSize = "";
+      td.style.whiteSpace = "nowrap";
+    }
+    let loN = 2.2;
+    let hiN = 13;
+    for (let i = 0; i < 16; i++) {
+      const mid = (loN + hiN) / 2;
+      for (const td of numTds) td.style.fontSize = `${mid}px`;
+      void table.offsetHeight;
+      let over = false;
+      for (const td of numTds) {
+        if (td.scrollHeight > td.clientHeight + 0.5 || td.scrollWidth > td.clientWidth + 0.5) {
+          over = true;
+          break;
+        }
+      }
+      if (over) hiN = mid;
+      else loN = mid;
+    }
+    let bestN = Math.max(2.2, loN);
+    for (const td of numTds) td.style.fontSize = `${bestN}px`;
+    void table.offsetHeight;
+    while (bestN > 2) {
+      let any = false;
+      for (const td of numTds) {
+        if (td.scrollWidth > td.clientWidth + 0.5 || td.scrollHeight > td.clientHeight + 0.5) {
+          any = true;
+          break;
+        }
+      }
+      if (!any) break;
+      bestN -= 0.25;
+      for (const td of numTds) td.style.fontSize = `${bestN}px`;
+      void table.offsetHeight;
+    }
+    for (const td of numTds) td.style.fontSize = `${Math.max(2, bestN)}px`;
+    void table.offsetHeight;
+    for (let step = 0; step < 24; step++) {
+      const trial = bestN + 0.25;
+      for (const td of numTds) td.style.fontSize = `${trial}px`;
+      void table.offsetHeight;
+      let over = false;
+      for (const td of numTds) {
+        if (td.scrollWidth > td.clientWidth + 0.5 || td.scrollHeight > td.clientHeight + 0.5) {
+          over = true;
+          break;
+        }
+      }
+      if (over) break;
+      bestN = trial;
+    }
+    for (const td of numTds) td.style.fontSize = `${Math.max(2, bestN)}px`;
+  }
+
+  function setupTransposeUniformColumnResize(table) {
+    if (!table) return;
+    const dateThs = Array.from(table.querySelectorAll("thead th.transpose-date-th"));
+    if (!dateThs.length) return;
+
+    const readDateColPx = () => {
+      const v = getComputedStyle(table).getPropertyValue("--transpose-date-col-px").trim();
+      const m = /^([\d.]+)px$/.exec(v);
+      return m ? Math.max(28, Math.min(120, Number(m[1]))) : Math.round((74 * 2) / 3);
+    };
+
+    /** 드래그 중: 날짜 열 폭만 갱신, 손 뗄 때 저장·글자 맞춤 */
+    const applyDateColPxOnly = (px) => {
+      const p = Math.max(28, Math.min(120, Math.round(px)));
+      table.style.setProperty("--transpose-date-col-px", `${p}px`);
+    };
+
+    const persistDateColPx = () => {
+      const p = readDateColPx();
+      try {
+        localStorage.setItem("dailyPrintTranspose:dateColUniform", String(p));
+      } catch (_) {
+        /* noop */
+      }
+      scheduleFitTransposeTypography(table);
+    };
+
+    dateThs.forEach((th) => {
+      if (th.querySelector(".col-resizer")) return;
+      th.style.position = "relative";
+      const h = document.createElement("div");
+      h.className = "col-resizer";
+      h.setAttribute("role", "separator");
+      h.tabIndex = 0;
+      th.appendChild(h);
+    });
+
+    let dragging = null;
+    const onMove = (e) => {
+      if (!dragging) return;
+      const delta = e.clientX - dragging.startX;
+      applyDateColPxOnly(dragging.startPx + delta);
+      e.preventDefault();
+    };
+    const onUp = () => {
+      if (!dragging) return;
+      dragging = null;
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      document.body.classList.remove("is-col-resizing");
+      persistDateColPx();
+    };
+
+    table.addEventListener("mousedown", (e) => {
+      const t = e.target;
+      const h = t && t.closest && t.closest(".col-resizer");
+      if (!h || !table.contains(h)) return;
+      const th = h.closest("th");
+      if (!th || !th.classList.contains("transpose-date-th")) return;
+      dragging = { startX: e.clientX, startPx: readDateColPx() };
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+      document.body.classList.add("is-col-resizing");
+      e.preventDefault();
+    });
   }
 
   /**
@@ -5288,45 +5766,48 @@
     const q = norm(searchEl.value || "");
     const filtered = st.options.filter((v) => norm(stockDimDisplayLabel(key, v)).includes(q) || norm(v).includes(q));
     listEl.innerHTML = "";
+    const hideSearchAllRow = Boolean(q && filtered.length === 1);
 
-    const allRow = document.createElement("label");
-    allRow.className = "picker-option";
-    const allCb = document.createElement("input");
-    allCb.type = "checkbox";
-    if (q) {
-      const allFilteredOn =
-        filtered.length > 0 && filtered.every((v) => st.selected.has(v));
-      const someFilteredOn = filtered.some((v) => st.selected.has(v));
-      allCb.checked = allFilteredOn;
-      allCb.indeterminate = !allFilteredOn && someFilteredOn;
-    } else {
-      allCb.checked = st.selected.size === st.options.length && st.options.length > 0;
-      allCb.indeterminate = st.selected.size > 0 && st.selected.size < st.options.length;
-    }
-    allCb.addEventListener("change", () => {
-      if (allCb.checked) {
-        if (q) st.selected = new Set(filtered);
-        else st.selected = new Set(st.options);
-      } else if (q) filtered.forEach((v) => st.selected.delete(v));
-      else st.selected.clear();
-      renderStockFilterList(key);
-      updateStockFilterButton(key);
-      renderStockTableView();
-    });
-    const allTx = document.createElement("span");
-    allTx.textContent = q ? "전체(검색 목록)" : "전체";
-    if (q) allRow.title = "검색으로 보이는 항목만 모두 선택합니다.";
-    allRow.appendChild(allCb);
-    allRow.appendChild(allTx);
-    listEl.appendChild(allRow);
+    if (!hideSearchAllRow) {
+      const allRow = document.createElement("label");
+      allRow.className = "picker-option";
+      const allCb = document.createElement("input");
+      allCb.type = "checkbox";
+      if (q) {
+        const allFilteredOn =
+          filtered.length > 0 && filtered.every((v) => st.selected.has(v));
+        const someFilteredOn = filtered.some((v) => st.selected.has(v));
+        allCb.checked = allFilteredOn;
+        allCb.indeterminate = !allFilteredOn && someFilteredOn;
+      } else {
+        allCb.checked = st.selected.size === st.options.length && st.options.length > 0;
+        allCb.indeterminate = st.selected.size > 0 && st.selected.size < st.options.length;
+      }
+      allCb.addEventListener("change", () => {
+        if (allCb.checked) {
+          if (q) st.selected = new Set(filtered);
+          else st.selected = new Set(st.options);
+        } else if (q) filtered.forEach((v) => st.selected.delete(v));
+        else st.selected.clear();
+        renderStockFilterList(key);
+        updateStockFilterButton(key);
+        renderStockTableView();
+      });
+      const allTx = document.createElement("span");
+      allTx.textContent = q ? "전체(검색 목록)" : "전체";
+      if (q) allRow.title = "검색으로 보이는 항목만 모두 선택합니다.";
+      allRow.appendChild(allCb);
+      allRow.appendChild(allTx);
+      listEl.appendChild(allRow);
 
-    if (filtered.length === 0) {
-      allCb.disabled = true;
-      const em = document.createElement("div");
-      em.className = "picker-empty";
-      em.textContent = "검색 결과 없음";
-      listEl.appendChild(em);
-      return;
+      if (filtered.length === 0) {
+        allCb.disabled = true;
+        const em = document.createElement("div");
+        em.className = "picker-empty";
+        em.textContent = "검색 결과 없음";
+        listEl.appendChild(em);
+        return;
+      }
     }
 
     filtered.forEach((v) => {
@@ -5336,8 +5817,10 @@
       cb.type = "checkbox";
       cb.checked = st.selected.has(v);
       cb.addEventListener("change", () => {
-        if (cb.checked) st.selected.add(v);
-        else st.selected.delete(v);
+        if (cb.checked) {
+          if (q && filtered.length === 1) st.selected = new Set([v]);
+          else st.selected.add(v);
+        } else st.selected.delete(v);
         updateStockFilterButton(key);
         renderStockFilterList(key);
         renderStockTableView();
@@ -12193,6 +12676,231 @@
     dailyPanel.style.removeProperty("zoom");
   }
 
+  /** 인쇄 시 구분·코드·타입 열을 숨기므로 빈 표 안내 셀 colspan 을 맞춤 */
+  let dailyBoardPrintEmptyColspanRestore = /** @type {number | null} */ (null);
+
+  function applyDailyBoardPrintEmptyColspanFix() {
+    if (!document.body.classList.contains("app-body--print-daily-only")) return;
+    const table = document.querySelector("#viewDaily table.board-table");
+    if (!table) return;
+    const empty = table.querySelector("tbody td.empty-filter-msg");
+    if (!empty) return;
+    const thCount = table.querySelectorAll("thead tr th").length;
+    if (thCount < 4) return;
+    if (dailyBoardPrintEmptyColspanRestore === null) {
+      dailyBoardPrintEmptyColspanRestore = empty.colSpan;
+    }
+    empty.colSpan = thCount - 3;
+  }
+
+  function clearDailyBoardPrintEmptyColspanFix() {
+    if (dailyBoardPrintEmptyColspanRestore === null) return;
+    const table = document.querySelector("#viewDaily table.board-table");
+    const empty = table && table.querySelector("tbody td.empty-filter-msg");
+    if (empty) empty.colSpan = dailyBoardPrintEmptyColspanRestore;
+    dailyBoardPrintEmptyColspanRestore = null;
+  }
+
+  /**
+   * 인쇄 시 가로로 잘리는 날짜 열을 여러 장으로 분할 출력
+   * - 축소(zoom) 없이 "화면에 보이는 모든 날짜 열"을 출력하려면 페이지 단위로 열을 나눠야 함
+   */
+  function clearDailyPrintSplitPages() {
+    const wrap = document.getElementById("tableWrap");
+    if (!wrap) return;
+    const pages = wrap.querySelector("#dailyPrintPages");
+    if (pages) pages.remove();
+    wrap.classList.remove("daily-print--split-active");
+  }
+
+  function applyDailyPrintSplitPages() {
+    clearDailyPrintSplitPages();
+    if (!document.body.classList.contains("app-body--print-daily-only")) return;
+
+    const wrap = document.getElementById("tableWrap");
+    if (!wrap) return;
+
+    const srcTable = wrap.querySelector("table.board-table");
+    if (!srcTable) return;
+
+    const ths = Array.from(srcTable.querySelectorAll("thead th"));
+    if (!ths.length) return;
+
+    const dateColIdx = [];
+    const nonDateIdx = [];
+    for (let i = 0; i < ths.length; i++) {
+      const t = (ths[i].textContent || "").trim();
+      // "05/.." 같은 날짜 헤더를 날짜 열로 간주
+      if (/^\d{1,2}\s*\/\s*\d{1,2}/.test(t) || /^(\d{1,2})월/.test(t) || /\d{1,2}\/\d{1,2}/.test(t)) {
+        dateColIdx.push(i);
+      } else {
+        nonDateIdx.push(i);
+      }
+    }
+    if (!dateColIdx.length) return;
+
+    const marginMm = 5;
+    const targetW = orderCalendarCssMmToPx(420 - 2 * marginMm);
+    const maxW = Math.max(200, targetW - 8); // 약간의 여유
+
+    const thWidths = ths.map((th) => Math.ceil(th.getBoundingClientRect().width));
+    const nonDateW = nonDateIdx.reduce((s, idx) => s + (thWidths[idx] || 0), 0);
+
+    // 2주(14일) 단위로 먼저 끊고, 각 2주 묶음 내에서 가로폭 기준 분할
+    const DAYS_PER_CHUNK = 14;
+    /** @type {number[][]} */
+    const pages = [];
+
+    for (let s = 0; s < dateColIdx.length; s += DAYS_PER_CHUNK) {
+      const chunk = dateColIdx.slice(s, s + DAYS_PER_CHUNK);
+      if (!chunk.length) continue;
+
+      // 한 페이지에 최소 1개의 날짜 열은 들어가야 함
+      let cur = [];
+      let curW = nonDateW;
+
+      for (const idx of chunk) {
+        const w = thWidths[idx] || 0;
+        if (cur.length && curW + w > maxW) {
+          pages.push(cur);
+          cur = [];
+          curW = nonDateW;
+        }
+        cur.push(idx);
+        curW += w;
+      }
+      if (cur.length) pages.push(cur);
+    }
+
+    if (!pages.length) return;
+
+    /** @param {HTMLTableElement} table */
+    function pruneTableToKeepColumns(table, keepIdxSet) {
+      const rows = Array.from(table.querySelectorAll("tr"));
+      for (const tr of rows) {
+        const cells = Array.from(tr.children);
+        for (let i = cells.length - 1; i >= 0; i--) {
+          if (!keepIdxSet.has(i)) cells[i].remove();
+        }
+      }
+
+      // 빈 표 안내 셀(colspan) 보정
+      const headCount = table.querySelectorAll("thead tr th").length;
+      const empty = table.querySelector("tbody td.empty-filter-msg");
+      if (empty && headCount >= 1) empty.colSpan = headCount;
+    }
+
+    const host = document.createElement("div");
+    host.id = "dailyPrintPages";
+    host.className = "daily-print-pages";
+
+    for (let p = 0; p < pages.length; p++) {
+      const keep = new Set([...nonDateIdx, ...pages[p]]);
+      const cloned = /** @type {HTMLTableElement} */ (srcTable.cloneNode(true));
+      pruneTableToKeepColumns(cloned, keep);
+
+      const page = document.createElement("div");
+      page.className = "daily-print-page";
+      page.appendChild(cloned);
+      host.appendChild(page);
+    }
+
+    wrap.classList.add("daily-print--split-active");
+    wrap.appendChild(host);
+  }
+
+  function clearDailyTransposePrintSplitPages() {
+    if (!dailyPrintTableWrap) return;
+    const pages = dailyPrintTableWrap.querySelector("#dailyTransposePrintPages");
+    if (pages) pages.remove();
+    dailyPrintTableWrap.classList.remove("daily-print--split-active");
+  }
+
+  function applyDailyTransposePrintSplitPages() {
+    clearDailyTransposePrintSplitPages();
+    if (!document.body.classList.contains("app-body--print-daily-transpose-only")) return;
+    if (!dailyPrintTableWrap) return;
+
+    const srcTable = dailyPrintTableWrap.querySelector("table.board-table--transpose");
+    if (!srcTable) return;
+
+    const ths = Array.from(srcTable.querySelectorAll("thead th"));
+    if (ths.length < 3) return;
+
+    // 앞 2열(구분/제품) 고정, 이후는 날짜 열
+    const fixedIdx = [0, 1];
+    const prodIdx = [];
+    for (let i = 2; i < ths.length; i++) prodIdx.push(i);
+    if (!prodIdx.length) return;
+
+    const marginMm = 5;
+    const targetW = orderCalendarCssMmToPx(420 - 2 * marginMm);
+    const maxW = Math.max(220, targetW - 8);
+
+    /** 화면 측정(getBoundingClientRect)은 가로 스크롤·인쇄 미리보기와 어긋날 수 있어, col 폭(CSS 변수)으로 분할 */
+    const parseCssPx = (raw) => {
+      const m = /^([\d.]+)px$/.exec(String(raw || "").trim());
+      return m ? Number(m[1]) : 0;
+    };
+    const cs = getComputedStyle(srcTable);
+    const wGubun = parseCssPx(cs.getPropertyValue("--transpose-gubun-col-px")) || 58;
+    const wName = parseCssPx(cs.getPropertyValue("--transpose-name-col-px")) || 118;
+    const wDate = parseCssPx(cs.getPropertyValue("--transpose-date-col-px")) || 49;
+    const thWidths = ths.map((_, i) => (i === 0 ? wGubun : i === 1 ? wName : wDate));
+    const fixedW = wGubun + wName;
+
+    /** @type {number[][]} */
+    const pages = [];
+    let cur = [];
+    let curW = fixedW;
+    for (const idx of prodIdx) {
+      const w = thWidths[idx] || 0;
+      if (cur.length && curW + w > maxW) {
+        pages.push(cur);
+        cur = [];
+        curW = fixedW;
+      }
+      cur.push(idx);
+      curW += w;
+    }
+    if (cur.length) pages.push(cur);
+    if (!pages.length) return;
+
+    /** @param {HTMLTableElement} table */
+    function pruneTableToKeepColumns(table, keepIdxSet) {
+      const rows = Array.from(table.querySelectorAll("tr"));
+      for (const tr of rows) {
+        const cells = Array.from(tr.children);
+        for (let i = cells.length - 1; i >= 0; i--) {
+          if (!keepIdxSet.has(i)) cells[i].remove();
+        }
+      }
+
+      // 빈 표 안내 셀(colspan) 보정
+      const headCount = table.querySelectorAll("thead tr th").length;
+      const empty = table.querySelector("tbody td.empty-filter-msg");
+      if (empty && headCount >= 1) empty.colSpan = headCount;
+    }
+
+    const host = document.createElement("div");
+    host.id = "dailyTransposePrintPages";
+    host.className = "daily-print-pages";
+
+    for (let p = 0; p < pages.length; p++) {
+      const keep = new Set([...fixedIdx, ...pages[p]]);
+      const cloned = /** @type {HTMLTableElement} */ (srcTable.cloneNode(true));
+      pruneTableToKeepColumns(cloned, keep);
+
+      const page = document.createElement("div");
+      page.className = "daily-print-page";
+      page.appendChild(cloned);
+      host.appendChild(page);
+    }
+
+    dailyPrintTableWrap.classList.add("daily-print--split-active");
+    dailyPrintTableWrap.appendChild(host);
+  }
+
   /** 1mm → px (@page margin 과 동일한 mm 기준) */
   let orderCalendarCssMmToPxCache = null;
   function orderCalendarCssMmToPx(mm) {
@@ -12213,6 +12921,7 @@
    */
   function applyOrderCalendarPrintFit() {
     clearOrderCalendarPrintFit();
+    return;
     if (!document.body.classList.contains("app-body--print-calendar-only")) return;
     if (!orderCalendarPanel || orderCalendarPanel.hidden) return;
 
@@ -12237,6 +12946,7 @@
   /** A3 가로 인쇄 영역(420−10)mm × (297−10)mm — 넘칠 때만 zoom */
   function applyDailyPrintFit() {
     clearDailyPrintFit();
+    return;
     if (!document.body.classList.contains("app-body--print-daily-only")) return;
     if (!dailyPanel || (viewDaily && viewDaily.hidden)) return;
 
@@ -12265,6 +12975,7 @@
   /** A4 세로 인쇄 영역(210−16)mm × (297−16)mm — 넘칠 때만 zoom */
   function applyStockTablePrintFit() {
     clearStockTablePrintFit();
+    return;
     if (!document.body.classList.contains("app-body--print-stock-only")) return;
     if (!stockTablePanel || (viewStockTable && viewStockTable.hidden)) return;
 
@@ -12288,6 +12999,13 @@
   window.addEventListener("beforeprint", () => {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
+        applyDailyBoardPrintEmptyColspanFix();
+        applyDailyPrintSplitPages();
+        applyDailyTransposePrintSplitPages();
+        const transposePrintHost = document.getElementById("dailyTransposePrintPages");
+        if (transposePrintHost) {
+          transposePrintHost.querySelectorAll("table.board-table--transpose").forEach((t) => fitTransposeTypography(t));
+        }
         applyDailyPrintFit();
         applyOrderCalendarPrintFit();
         applyStockTablePrintFit();
@@ -12298,6 +13016,9 @@
     });
   });
   window.addEventListener("afterprint", () => {
+    clearDailyBoardPrintEmptyColspanFix();
+    clearDailyPrintSplitPages();
+    clearDailyTransposePrintSplitPages();
     clearDailyPrintFit();
     clearOrderCalendarPrintFit();
     clearStockTablePrintFit();
@@ -12305,6 +13026,16 @@
   });
   window.addEventListener("resize", () => {
     scheduleFitOrderCalendarNames();
+    if (currentView === "dailyPrintTranspose" && dailyPrintTableWrap) {
+      const t = dailyPrintTableWrap.querySelector("table.board-table--transpose");
+      if (t) {
+        if (transposeResizeDebounce) clearTimeout(transposeResizeDebounce);
+        transposeResizeDebounce = setTimeout(() => {
+          transposeResizeDebounce = null;
+          scheduleFitTransposeTypography(t);
+        }, 200);
+      }
+    }
   });
 
   navItems.forEach((btn) => {

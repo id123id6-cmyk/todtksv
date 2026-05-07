@@ -1842,25 +1842,19 @@ body.app-body--sidebar-collapsed .sidebar-toggle-btn {
 
 .team-prod-hub__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 1rem 1.1rem;
-}
-
-@media (min-width: 1100px) {
-  .team-prod-hub__grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.7rem 0.75rem;
 }
 
 .team-prod-hub__card {
   border: 1px solid rgba(226, 232, 240, 0.95);
   border-radius: calc(var(--radius) + 4px);
-  padding: 1rem 1rem 1.05rem;
+  padding: 0.72rem 0.72rem 0.78rem;
   background: linear-gradient(165deg, #ffffff 0%, #f8fafc 100%);
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.32rem;
   min-height: 0;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
@@ -1903,7 +1897,7 @@ body.app-body--sidebar-collapsed .sidebar-toggle-btn {
 
 .team-prod-hub__name {
   margin: 0;
-  font-size: 1.08rem;
+  font-size: 0.94rem;
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--text);
@@ -1911,16 +1905,16 @@ body.app-body--sidebar-collapsed .sidebar-toggle-btn {
 
 .team-prod-hub__hint {
   margin: 0 0 0.15rem;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   color: var(--muted);
-  line-height: 1.35;
+  line-height: 1.25;
 }
 
 .team-prod-hub__drop.dropzone {
   flex: 1;
-  min-height: 118px;
-  padding: 1.15rem 0.85rem;
-  margin-top: 0.15rem;
+  min-height: 88px;
+  padding: 0.75rem 0.55rem;
+  margin-top: 0.08rem;
 }
 
 .drawing-log-downtime-wrap {
@@ -4233,6 +4227,164 @@ select {
   }
 }
 
+/* 프린트(전치) 보기: 구분·제품(행) + 날짜(열, 헤더 2~3줄) + 숫자 1줄(JS 글자 맞춤) */
+.board-table.board-table--transpose thead th {
+  white-space: normal !important;
+}
+
+.board-table--transpose {
+  table-layout: fixed;
+  --transpose-gubun-col-px: 58px;
+  --transpose-name-col-px: 118px;
+  --transpose-date-col-px: 49px;
+}
+
+.board-table--transpose colgroup col.transpose-col--gubun {
+  width: var(--transpose-gubun-col-px) !important;
+}
+
+.board-table--transpose colgroup col.transpose-col--name {
+  width: var(--transpose-name-col-px) !important;
+}
+
+.board-table--transpose colgroup col.transpose-col--date {
+  width: var(--transpose-date-col-px) !important;
+}
+
+.board-table--transpose th,
+.board-table--transpose td {
+  box-sizing: border-box;
+  vertical-align: middle;
+  padding: 0.2rem 0.15rem;
+}
+
+.board-table--transpose th.transpose-col--gubun,
+.board-table--transpose td.transpose-col--gubun {
+  width: var(--transpose-gubun-col-px);
+  max-width: var(--transpose-gubun-col-px);
+  text-align: center;
+  white-space: normal;
+  word-break: keep-all;
+  font-weight: 700;
+  font-size: 0.68rem;
+}
+
+.board-table--transpose th.transpose-col--name,
+.board-table--transpose td.transpose-col--name {
+  width: var(--transpose-name-col-px);
+  max-width: var(--transpose-name-col-px);
+  text-align: left;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+  font-size: 0.7rem;
+}
+
+.board-table--transpose thead th.transpose-col--gubun,
+.board-table--transpose thead th.transpose-col--name {
+  height: 2.85rem;
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+/* 날짜 열 헤더: MM/DD + 줄바꿈 + (요일) 2줄 고정 */
+.board-table--transpose thead th.transpose-date-th {
+  min-height: 4.35rem;
+  height: auto;
+  padding: 0.2rem 0.1rem;
+  vertical-align: middle;
+}
+
+.board-table--transpose .transpose-date-th__wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 3.9rem;
+  white-space: normal !important;
+}
+
+.board-table--transpose .transpose-date-head__text {
+  font-weight: 800;
+  line-height: 1.18;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  text-align: center;
+  hyphens: auto;
+  font-size: 9px;
+  white-space: normal !important;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+/* 제품(품목) 묶음 구분선 — 구분·제품·날짜 열 전체에 동일 선 */
+.board-table--transpose tbody tr.transpose-row--pack-start:not(:first-child) td {
+  border-top: 2px solid #6b8eb8 !important;
+}
+
+/* 날짜 열 아래 숫자: 1줄, 칸에 최대한 크게(JS) */
+.board-table--transpose tbody td.num {
+  width: var(--transpose-date-col-px);
+  max-width: var(--transpose-date-col-px);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: clip;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  padding: 0.08rem 0.04rem !important;
+}
+
+.board-table--transpose tbody td.cell-diff {
+  padding: 0.12rem 0.08rem;
+  white-space: nowrap !important;
+}
+
+.board-table--transpose tbody td.cell-diff .diff-arrow {
+  font-size: inherit;
+  white-space: nowrap;
+}
+
+.board-table--transpose tbody td.cell-diff .diff-value {
+  white-space: nowrap;
+}
+
+.col-resizer {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+  user-select: none;
+  touch-action: none;
+}
+
+.col-resizer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 4px;
+  width: 2px;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.18);
+}
+
+.is-col-resizing,
+.is-col-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
 /* 날짜별 발주 달력 — 인쇄: A3 가로, 내용 높이만 사용, 넘칠 때만 JS에서 zoom */
 @media print {
   @page {
@@ -4247,6 +4399,7 @@ select {
 
   html,
   body.app-body--print-daily-only,
+  body.app-body--print-daily-transpose-only,
   body.app-body--print-calendar-only,
   body.app-body--print-stock-only {
     margin: 0 !important;
@@ -4314,6 +4467,89 @@ select {
   body.app-body--print-daily-only #viewDaily .picker-panel,
   body.app-body--print-daily-only #viewDaily #btnExport {
     display: none !important;
+  }
+
+  /* 일별 통합표 인쇄: 제품·재고·수출발주량·날짜만 (구분·품목코드·타입 제외), 날짜 열 최대한 배치 */
+  body.app-body--print-daily-only #viewDaily .daily-filters-slot,
+  body.app-body--print-daily-only #viewDaily .table-toolbar .toolbar-actions,
+  body.app-body--print-daily-only #viewDaily .view-desc--toolbar {
+    display: none !important;
+  }
+
+  body.app-body--print-daily-only #viewDaily .board-table .sticky-c1,
+  body.app-body--print-daily-only #viewDaily .board-table .sticky-c2,
+  body.app-body--print-daily-only #viewDaily .board-table .sticky-c4 {
+    display: none !important;
+  }
+
+  body.app-body--print-daily-only #viewDaily .board-table .sticky-left.sticky-c3,
+  body.app-body--print-daily-only #viewDaily .board-table .sticky-left.sticky-c5,
+  body.app-body--print-daily-only #viewDaily .board-table .sticky-left.sticky-c6 {
+    position: static !important;
+    left: auto !important;
+    box-shadow: none !important;
+    min-width: 0 !important;
+  }
+
+  body.app-body--print-daily-only #viewDaily .board-table {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    font-size: 10pt !important;
+    table-layout: fixed;
+  }
+
+  body.app-body--print-daily-only #viewDaily .board-table thead th {
+    position: static !important;
+  }
+
+  body.app-body--print-daily-only #viewDaily .board-table th,
+  body.app-body--print-daily-only #viewDaily .board-table td {
+    padding: 0.1rem 0.12rem !important;
+  }
+
+  body.app-body--print-daily-only #viewDaily .board-table thead th:not(.sticky-left),
+  body.app-body--print-daily-only #viewDaily .board-table tbody td:not(.sticky-left) {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  body.app-body--print-daily-only #viewDaily .board-table .sticky-c3 {
+    width: 9%;
+  }
+
+  body.app-body--print-daily-only #viewDaily .board-table .sticky-c5,
+  body.app-body--print-daily-only #viewDaily .board-table .sticky-c6 {
+    width: 3.5%;
+  }
+
+  body.app-body--print-daily-only #viewDaily .board-table td.product-name {
+    max-width: none !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  /* 인쇄: 일별 통합표를 날짜 열 묶음으로 여러 장 분할 */
+  body.app-body--print-daily-only #tableWrap.daily-print--split-active > table.board-table,
+  body.app-body--print-daily-only #tableWrap.daily-print--split-active > .empty-state {
+    display: none !important;
+  }
+
+  body.app-body--print-daily-only #dailyPrintPages {
+    display: block !important;
+  }
+
+  body.app-body--print-daily-only .daily-print-page {
+    break-after: page;
+    page-break-after: always;
+    padding-bottom: 2mm;
+  }
+
+  body.app-body--print-daily-only .daily-print-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
   }
 
   body.app-body--print-calendar-only .sidebar {
@@ -4785,5 +5021,82 @@ select {
 
   body.app-body--print-stock-only .stock-picker-actions {
     display: none !important;
+  }
+
+  /* 전치(제품가로/날짜세로) 인쇄: 표 전체 출력(가로 분할) */
+  body.app-body--print-daily-transpose-only .sidebar {
+    display: none !important;
+  }
+
+  body.app-body--print-daily-transpose-only .main-wrap {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+  }
+
+  body.app-body--print-daily-transpose-only .main-wrap > .km-strip,
+  body.app-body--print-daily-transpose-only .main-wrap > section:not(#viewDailyPrintTranspose) {
+    display: none !important;
+  }
+
+  body.app-body--print-daily-transpose-only #viewDailyPrintTranspose {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+  }
+
+  body.app-body--print-daily-transpose-only #viewDailyPrintTranspose .table-toolbar,
+  body.app-body--print-daily-transpose-only #viewDailyPrintTranspose .daily-filters-slot {
+    display: none !important;
+  }
+
+  body.app-body--print-daily-transpose-only #dailyPrintTableWrap {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  body.app-body--print-daily-transpose-only #dailyPrintTableWrap.daily-print--split-active > table.board-table--transpose,
+  body.app-body--print-daily-transpose-only #dailyPrintTableWrap.daily-print--split-active > .empty-state {
+    display: none !important;
+  }
+
+  body.app-body--print-daily-transpose-only #dailyTransposePrintPages {
+    display: block !important;
+  }
+
+  /* 날짜 열 분할 시 각 덩어리가 다음 인쇄 장으로 넘어가게 (일별 인쇄와 동일) */
+  body.app-body--print-daily-transpose-only #dailyTransposePrintPages .daily-print-page {
+    break-after: page;
+    page-break-after: always;
+    padding-bottom: 2mm;
+  }
+
+  body.app-body--print-daily-transpose-only #dailyTransposePrintPages .daily-print-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  body.app-body--print-daily-transpose-only #viewDailyPrintTranspose .board-table--transpose {
+    width: 100% !important;
+    max-width: 100% !important;
+    font-size: 10pt !important;
+  }
+
+  body.app-body--print-daily-transpose-only #viewDailyPrintTranspose .board-table--transpose th,
+  body.app-body--print-daily-transpose-only #viewDailyPrintTranspose .board-table--transpose td {
+    padding: 0.12rem 0.16rem !important;
+  }
+
+  body.app-body--print-daily-transpose-only #dailyTransposePrintPages .board-table.board-table--transpose thead th,
+  body.app-body--print-daily-transpose-only #viewDailyPrintTranspose .board-table.board-table--transpose thead th {
+    white-space: normal !important;
   }
 }

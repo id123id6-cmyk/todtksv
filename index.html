@@ -26,6 +26,7 @@
         <div class="nav-group__title nav-group__title--section">발주서</div>
         <button type="button" class="nav-item" data-view="upload">발주서 엑셀 업로드</button>
         <button type="button" class="nav-item" data-view="daily" data-team-segment="">일별 통합표</button>
+        <button type="button" class="nav-item nav-item--sub" data-view="dailyPrintTranspose">프린트 · 날짜가로(제품세로)</button>
         <button type="button" class="nav-item" data-view="orderCalendar">날짜별 발주 달력</button>
         <button type="button" class="nav-item" data-view="stockTable">재고</button>
         <button type="button" class="nav-item" data-view="summary">요약</button>
@@ -354,6 +355,26 @@
         </div>
         <div class="table-wrap" id="tableWrap">
           <div class="empty-state" id="emptyState">
+            발주서 엑셀 업로드에서 파일을 먼저 넣어 주세요.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="viewDailyPrintTranspose" class="view" hidden>
+      <div class="panel panel--flush">
+        <div class="table-toolbar">
+          <div>
+            <h2 class="view-title view-title--inline">프린트 · 날짜가로(제품세로)</h2>
+            <p class="view-desc view-desc--toolbar">
+              인쇄용 보기입니다. <strong>제품·구분</strong>은 세로(행), <strong>날짜</strong>는 가로(열)입니다. 날짜는 오늘 기준 <strong>약 40일</strong>(토·일 제외), 날짜 칸 헤더는 <strong>2~3줄 줄바꿈</strong>입니다. 숫자는 한 줄로 두고 칸 안에 <strong>최대한 크게</strong> 맞춥니다. <strong>날짜 열</strong> 경계를 드래그하면 날짜 열 너비가 같이 조절됩니다.
+              <span id="dailyPrintTeamHint" class="view-desc__team" hidden></span>
+            </p>
+          </div>
+        </div>
+        <div id="dailyFiltersSlotPrint" class="daily-filters-slot"></div>
+        <div class="table-wrap" id="dailyPrintTableWrap">
+          <div class="empty-state">
             발주서 엑셀 업로드에서 파일을 먼저 넣어 주세요.
           </div>
         </div>
