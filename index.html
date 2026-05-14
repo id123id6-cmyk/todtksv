@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>휘일 · 재고·발주 부족량 점검</title>
+  <title>휘일 생산관리 통합 보드</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link
     rel="stylesheet"
@@ -18,31 +18,33 @@
       <img class="brand-mark" src="assets/company-mark.png" width="76" height="76" alt="휘일" decoding="async" />
       <div class="brand-text">
         <div class="brand-title">휘일 생산관리</div>
-        <div class="brand-sub">발주·재고·작업일지 데이터 보드</div>
+        <div class="brand-sub">통합 보드 · 발주 · 재고 · 작업일지</div>
       </div>
     </button>
     <nav class="sidebar-nav">
-      <div class="nav-group nav-group--first" role="group" aria-label="발주서·발주 보드">
-        <div class="nav-group__title nav-group__title--section">발주서</div>
+      <div class="nav-group" role="group" aria-label="데이터 입력">
+        <div class="nav-group__title nav-group__title--section">데이터 입력</div>
         <button type="button" class="nav-item" data-view="upload">발주서 엑셀 업로드</button>
+        <button type="button" class="nav-item nav-item--team-hub" data-view="teamProductionUpload">생산 엑셀 업로드</button>
+      </div>
+      <div class="nav-group" role="group" aria-label="발주 · 재고">
+        <div class="nav-group__title nav-group__title--section">발주 · 재고</div>
         <button type="button" class="nav-item" data-view="daily" data-team-segment="">일별 통합표</button>
         <button type="button" class="nav-item nav-item--sub" data-view="dailyPrintTranspose">프린트 · 날짜가로(제품세로)</button>
         <button type="button" class="nav-item" data-view="orderCalendar">날짜별 발주 달력</button>
         <button type="button" class="nav-item" data-view="stockTable">재고</button>
         <button type="button" class="nav-item" data-view="summary">요약</button>
       </div>
-      <div class="nav-group" role="group" aria-label="팀별 자료">
-        <div class="nav-group__title nav-group__title--section">팀</div>
-        <button type="button" class="nav-item nav-item--team-hub" data-view="teamProductionUpload">생산 엑셀 업로드</button>
+      <div class="nav-group" role="group" aria-label="생산 작업일지">
+        <div class="nav-group__title nav-group__title--section">생산 작업일지</div>
         <button type="button" class="nav-item nav-item--sub" data-view="drawingLog">드로잉</button>
         <button type="button" class="nav-item nav-item--sub" data-view="parallelLog">페럴</button>
         <button type="button" class="nav-item nav-item--sub" data-view="mufflerLog">머플러</button>
         <button type="button" class="nav-item nav-item--sub" data-view="doublePipeLog">이중관</button>
         <button type="button" class="nav-item nav-item--sub" data-view="hwaseungDoublePipeLog">화승이중관</button>
       </div>
-      <div class="sidebar-nav-divider sidebar-nav-divider--spectrum" role="presentation" aria-hidden="true"></div>
-      <div class="sidebar-nav-follow" role="group" aria-label="주간 업무보고·계획대비 실적·재고 단가">
-        <div class="nav-group__title nav-group__title--section">주간 업무보고</div>
+      <div class="nav-group" role="group" aria-label="보고 · 출력">
+        <div class="nav-group__title nav-group__title--section">보고 · 출력</div>
         <button type="button" class="nav-item nav-item--sub" data-view="planVsActual">계획대비 실적</button>
         <button type="button" class="nav-item nav-item--sub" data-view="stockUnitPrice">재고 단가</button>
       </div>
@@ -61,126 +63,169 @@
       <p class="km-strip__text">발주·재고·팀 작업일지를 한곳에서 빠르게 확인하세요.</p>
     </header>
     <section id="viewHome" class="view view-home">
-      <div class="home-layout" role="navigation" aria-label="메인 메뉴">
-        <div class="home-banner">
-          <div class="home-banner__grid">
-            <div class="home-banner__copy">
-              <p class="home-banner__kicker">휘일 생산관리</p>
-              <p class="home-banner__badge">발주 · 재고 · 팀 작업일지</p>
-              <h1 class="home-banner__head">
-                숫자가 보이면<br />
-                <span class="home-banner__accent">생산이 보입니다</span>
-              </h1>
-              <p class="home-banner__sub">
-                발주·재고는 보드로, 팀별 작업일지는 타임라인으로. 왼쪽 위 로고를 누르면 언제든 이 화면으로 돌아옵니다.
-              </p>
-              <div class="home-banner__actions">
-                <button type="button" class="home-banner__cta" data-view="upload">발주서 엑셀 업로드</button>
-                <button type="button" class="home-banner__ghost" data-view="daily" data-team-segment="">일별 통합표 열기</button>
+      <div class="home-layout home-dashboard" role="navigation" aria-label="업무 시작 대시보드">
+        <header class="home-dashboard__intro">
+          <p class="home-dashboard__intro-kicker">업무 시작</p>
+          <h1 class="home-dashboard__intro-title">휘일 생산관리 통합 보드</h1>
+          <p class="home-dashboard__intro-desc">
+            아래 순서대로 데이터를 넣고 보드·작업일지·보고 화면으로 이동하세요. 왼쪽 위 로고를 누르면 언제든 이 화면으로 돌아옵니다.
+          </p>
+        </header>
+
+        <div class="home-flow-grid">
+          <article class="home-flow-card">
+            <div class="home-flow-card__head">
+              <span class="home-flow-card__step" aria-hidden="true">1</span>
+              <div class="home-flow-card__titles">
+                <h2 class="home-flow-card__title">데이터 입력</h2>
+                <p class="home-flow-card__desc">발주·재고 파일과 팀별 작업일지 엑셀을 반영합니다.</p>
               </div>
             </div>
-            <div class="home-banner__visual" aria-hidden="true">
-              <div class="home-banner__card home-banner__card--a"></div>
-              <div class="home-banner__card home-banner__card--b"></div>
-              <div class="home-banner__card home-banner__card--c"></div>
+            <div class="home-flow-card__links">
+              <button type="button" class="home-flow-link home-flow-link--primary" data-view="upload">
+                <span>발주서 엑셀 업로드</span>
+                <span class="home-flow-link__hint">발주·재고</span>
+                <span class="home-flow-link__chev" aria-hidden="true">→</span>
+              </button>
+              <button type="button" class="home-flow-link" data-view="teamProductionUpload">
+                <span>생산 엑셀 업로드</span>
+                <span class="home-flow-link__hint">팀 작업일지</span>
+                <span class="home-flow-link__chev" aria-hidden="true">→</span>
+              </button>
             </div>
-          </div>
-        </div>
+          </article>
 
-        <div class="home-spotlight" role="navigation" aria-label="빠른 이동">
-          <button type="button" class="home-spotlight__btn" data-view="orderCalendar">
-            <span class="home-spotlight__ico" aria-hidden="true">달</span>
-            <span class="home-spotlight__text">
-              <span class="home-spotlight__label">날짜별 발주 달력</span>
-              <span class="home-spotlight__hint">월 단위 · 제품별 합계</span>
-            </span>
-          </button>
-          <button type="button" class="home-spotlight__btn" data-view="stockTable">
-            <span class="home-spotlight__ico" aria-hidden="true">재</span>
-            <span class="home-spotlight__text">
-              <span class="home-spotlight__label">재고</span>
-              <span class="home-spotlight__hint">품목코드 · 현재고 필터</span>
-            </span>
-          </button>
-          <button type="button" class="home-spotlight__btn" data-view="summary">
-            <span class="home-spotlight__ico" aria-hidden="true">요</span>
-            <span class="home-spotlight__text">
-              <span class="home-spotlight__label">요약</span>
-              <span class="home-spotlight__hint">타입·기간 집계</span>
-            </span>
-          </button>
-        </div>
-
-        <div class="home-section">
-          <div class="home-section__head">
-            <span class="home-section__step" aria-hidden="true">01</span>
-            <div class="home-section__head-text">
-              <h2 class="home-section__title">발주 · 재고</h2>
-              <p class="home-section__desc">발주서·재고는 여기서, 팀 작업일지 엑셀은 왼쪽 <strong>생산 엑셀 업로드</strong>에서 올리면 됩니다.</p>
+          <article class="home-flow-card">
+            <div class="home-flow-card__head">
+              <span class="home-flow-card__step" aria-hidden="true">2</span>
+              <div class="home-flow-card__titles">
+                <h2 class="home-flow-card__title">발주 · 재고 확인</h2>
+                <p class="home-flow-card__desc">통합표·달력·재고·요약으로 수량과 부족을 확인합니다.</p>
+              </div>
             </div>
-          </div>
-          <div class="home-row home-row--2">
-            <button type="button" class="home-tile home-tile--xl" data-view="upload">
-              <span class="home-tile__tag">발주</span>
-              <span class="home-tile__icon" aria-hidden="true">업</span>
-              <span class="home-tile__title">발주서 엑셀 업로드</span>
-              <span class="home-tile__text">발주서 입력 · 지난발주서 · 재고파일을 넣으면 자동으로 표에 반영됩니다.</span>
-            </button>
-            <button type="button" class="home-tile home-tile--xl home-tile--mint" data-view="daily" data-team-segment="">
-              <span class="home-tile__tag">보드</span>
-              <span class="home-tile__icon" aria-hidden="true">표</span>
-              <span class="home-tile__title">일별 통합표</span>
-              <span class="home-tile__text">구분·품목코드·제품명·날짜 열이 있는 발주 보드와 동일한 구조입니다.</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="home-section home-section--split">
-          <div class="home-split__col">
-            <h2 class="home-section__title home-section__title--sm">요약</h2>
-            <p class="home-section__desc">업로드한 데이터 기준 집계를 봅니다.</p>
-            <button type="button" class="home-pill" data-view="summary">요약 화면으로 →</button>
-          </div>
-          <div class="home-split__col home-split__col--line">
-            <h2 class="home-section__title home-section__title--sm">일별 통합표 · 구간</h2>
-            <p class="home-section__desc">드로잉팀 구간만 좁혀 볼 때 사용합니다.</p>
-            <div class="home-chip-row">
-              <button type="button" class="home-chip" data-view="daily" data-team-segment="이중관">이중관</button>
+            <div class="home-flow-card__actions">
+              <div class="home-flow-card__links">
+                <button type="button" class="home-flow-link" data-view="daily" data-team-segment="">
+                  <span>일별 통합표</span>
+                  <span class="home-flow-link__hint">보드</span>
+                  <span class="home-flow-link__chev" aria-hidden="true">→</span>
+                </button>
+                <button type="button" class="home-flow-link" data-view="orderCalendar">
+                  <span>날짜별 발주 달력</span>
+                  <span class="home-flow-link__hint">월·품목</span>
+                  <span class="home-flow-link__chev" aria-hidden="true">→</span>
+                </button>
+                <button type="button" class="home-flow-link" data-view="stockTable">
+                  <span>재고</span>
+                  <span class="home-flow-link__hint">현재고</span>
+                  <span class="home-flow-link__chev" aria-hidden="true">→</span>
+                </button>
+                <button type="button" class="home-flow-link" data-view="summary">
+                  <span>요약</span>
+                  <span class="home-flow-link__hint">집계</span>
+                  <span class="home-flow-link__chev" aria-hidden="true">→</span>
+                </button>
+              </div>
+              <div class="home-flow-card__chips" aria-label="일별 통합표 구간 바로가기">
+                <button type="button" class="home-flow-chip" data-view="daily" data-team-segment="이중관">드로잉 구간 · 이중관만</button>
+              </div>
             </div>
-          </div>
+          </article>
+
+          <article class="home-flow-card">
+            <div class="home-flow-card__head">
+              <span class="home-flow-card__step" aria-hidden="true">3</span>
+              <div class="home-flow-card__titles">
+                <h2 class="home-flow-card__title">생산 실적 확인</h2>
+                <p class="home-flow-card__desc">팀별 작업일지·가동·비가동·정비 이력을 봅니다.</p>
+              </div>
+            </div>
+            <div class="home-flow-card__links">
+              <button type="button" class="home-flow-link" data-view="drawingLog">
+                <span>드로잉</span>
+                <span class="home-flow-link__chev" aria-hidden="true">→</span>
+              </button>
+              <button type="button" class="home-flow-link" data-view="parallelLog">
+                <span>페럴</span>
+                <span class="home-flow-link__chev" aria-hidden="true">→</span>
+              </button>
+              <button type="button" class="home-flow-link" data-view="mufflerLog">
+                <span>머플러</span>
+                <span class="home-flow-link__chev" aria-hidden="true">→</span>
+              </button>
+              <button type="button" class="home-flow-link" data-view="doublePipeLog">
+                <span>이중관</span>
+                <span class="home-flow-link__chev" aria-hidden="true">→</span>
+              </button>
+              <button type="button" class="home-flow-link" data-view="hwaseungDoublePipeLog">
+                <span>화승이중관</span>
+                <span class="home-flow-link__chev" aria-hidden="true">→</span>
+              </button>
+            </div>
+          </article>
+
+          <article class="home-flow-card">
+            <div class="home-flow-card__head">
+              <span class="home-flow-card__step" aria-hidden="true">4</span>
+              <div class="home-flow-card__titles">
+                <h2 class="home-flow-card__title">보고 · 출력</h2>
+                <p class="home-flow-card__desc">계획 대비 실적·단가 반영·인쇄용 보기로 마무리합니다.</p>
+              </div>
+            </div>
+            <div class="home-flow-card__links">
+              <button type="button" class="home-flow-link" data-view="planVsActual">
+                <span>계획대비 실적</span>
+                <span class="home-flow-link__hint">주간</span>
+                <span class="home-flow-link__chev" aria-hidden="true">→</span>
+              </button>
+              <button type="button" class="home-flow-link" data-view="stockUnitPrice">
+                <span>재고 단가</span>
+                <span class="home-flow-link__hint">금액 산출</span>
+                <span class="home-flow-link__chev" aria-hidden="true">→</span>
+              </button>
+              <button type="button" class="home-flow-link" data-view="dailyPrintTranspose">
+                <span>프린트 · 날짜가로(제품세로)</span>
+                <span class="home-flow-link__hint">인쇄</span>
+                <span class="home-flow-link__chev" aria-hidden="true">→</span>
+              </button>
+            </div>
+          </article>
         </div>
       </div>
     </section>
     <section id="viewUpload" class="view" hidden>
       <div class="panel">
         <h2 class="view-title">발주서 엑셀 업로드</h2>
-        <p class="view-desc">시트 「발주서 입력」(발주량·차이수량·부족품 등)과 「지난발주서」(지난발주)가 있으면 같은 파일에서 함께 읽습니다. 세로 형식(날짜·품목별 행)은 첫 행 헤더를 기준으로 열이 자동 맞춰집니다.</p>
-        <div class="upload-zone-card" data-upload-zone="order">
+        <p class="view-desc">시트 「발주서 입력」(발주량·차이수량·부족품 등)과 「지난발주서」(지난발주)가 있으면 같은 파일에서 함께 읽습니다. 세로 형식(날짜·품목별 행)은 첫 행 헤더를 기준으로 열이 자동 맞춰집니다. <strong>발주·재고·팀 작업일지</strong> 엑셀을 <strong>한 번에 여러 개</strong> 두면 내용을 보고 자동으로 나눠 반영합니다.</p>
+        <div class="upload-zone-card upload-zone-card--bulk">
           <div class="upload-zone-card__head">
-            <span class="upload-zone-card__label">발주서 파일</span>
-            <span class="upload-zone-card__status" hidden aria-live="polite"></span>
+            <span class="upload-zone-card__label">발주 · 재고 · 작업일지 (한 번에)</span>
           </div>
-          <label class="dropzone" id="dropzone">
-            <input type="file" id="fileInput" accept=".xlsx,.xls" hidden />
-            <span class="dropzone__text">파일 선택 또는 여기로 드래그</span>
-            <span class="dropzone__hint">.xlsx / .xls · 시트 「발주서 입력」</span>
+          <label class="dropzone" id="orderStockBulkDropzone">
+            <input type="file" id="orderStockBulkFileInput" accept=".xlsx,.xls" multiple hidden />
+            <span class="dropzone__text">여러 파일 선택 또는 여기로 드래그</span>
+            <span class="dropzone__hint">.xlsx / .xls · 「발주서 입력」·재고 시트·팀 작업일지 시트 기준 자동 구분</span>
           </label>
-          <p class="file-name" id="fileName"></p>
-          <p class="sheet-info" id="sheetInfo"></p>
         </div>
 
-        <div class="upload-zone-card" data-upload-zone="stock">
-          <div class="upload-zone-card__head">
-            <span class="upload-zone-card__label">재고 파일</span>
-            <span class="upload-zone-card__status" hidden aria-live="polite"></span>
+        <div class="upload-meta-grid">
+          <div class="upload-zone-card upload-zone-card--meta" data-upload-zone="order">
+            <div class="upload-zone-card__head">
+              <span class="upload-zone-card__label">발주서 파일</span>
+              <span class="upload-zone-card__status" hidden aria-live="polite"></span>
+            </div>
+            <p class="file-name" id="fileName"></p>
+            <p class="sheet-info" id="sheetInfo"></p>
           </div>
-          <label class="dropzone dropzone--sub" id="stockDropzone">
-            <input type="file" id="stockFileInput" accept=".xlsx,.xls" hidden />
-            <span class="dropzone__text">재고파일 선택</span>
-            <span class="dropzone__hint">재고 파일 업로드 시 재고 열 + 차이수량(일별)에 반영</span>
-          </label>
-          <p class="file-name" id="stockFileName"></p>
-          <p class="sheet-info" id="stockSheetInfo"></p>
+
+          <div class="upload-zone-card upload-zone-card--meta" data-upload-zone="stock">
+            <div class="upload-zone-card__head">
+              <span class="upload-zone-card__label">재고 파일</span>
+              <span class="upload-zone-card__status" hidden aria-live="polite"></span>
+            </div>
+            <p class="file-name" id="stockFileName"></p>
+            <p class="sheet-info" id="stockSheetInfo"></p>
+          </div>
         </div>
 
         <div class="mapping" id="mappingBlock" hidden>
@@ -209,7 +254,7 @@
           <button type="button" class="btn primary" id="btnApply">표 다시 만들기</button>
         </div>
 
-        <p class="upload-hint">발주 파일 반영 후 재고파일을 추가로 넣으면 <strong>재고 열</strong>과 <strong>차이수량(일별)</strong>이 갱신됩니다. 화면은 그대로 두며, 왼쪽 메뉴에서 <strong>일별 통합표</strong> 등을 열면 됩니다. 팀 작업일지 엑셀은 <strong>생산 엑셀 업로드</strong> 메뉴에서 올려 주세요.</p>
+        <p class="upload-hint">한 번에 올릴 때는 <strong>발주 → 재고</strong> 순으로 자동 처리됩니다. 팀 작업일지는 이 화면에서도 반영되며, 상세 화면은 왼쪽 메뉴에서 열 수 있습니다. <strong>생산 엑셀 업로드</strong>에서도 팀별 파일을 한꺼번에 둘 수 있습니다.</p>
       </div>
     </section>
 
@@ -218,8 +263,15 @@
         <div class="table-toolbar">
           <div>
             <h2 class="view-title view-title--inline">생산 엑셀 업로드</h2>
-            <p class="view-desc view-desc--toolbar">팀별 작업일지 엑셀을 아래에서 올리면 이 페이지에 그대로 두고 데이터만 반영합니다. 상세 표·타임라인은 왼쪽 메뉴의 해당 팀에서 열 수 있습니다.</p>
+            <p class="view-desc view-desc--toolbar">팀별 작업일지 엑셀을 아래에서 올리면 이 페이지에 그대로 두고 데이터만 반영합니다. 상세 표·타임라인은 왼쪽 메뉴의 해당 팀에서 열 수 있습니다. 여러 파일은 <strong>상자 하나에 한 번에</strong> 두거나, 칸마다 <strong>여러 개 선택</strong>해도 시트 기준으로 자동 배치됩니다.</p>
           </div>
+        </div>
+        <div class="team-prod-hub__bulk">
+          <label class="dropzone team-prod-hub__bulk-drop" id="teamProdBulkDropzone">
+            <input type="file" id="teamProdBulkFileInput" accept=".xlsx,.xls" multiple hidden />
+            <span class="dropzone__text">팀 작업일지 · 여러 파일 한 번에</span>
+            <span class="dropzone__hint">.xlsx / .xls · 드로잉·페럴·머플러·이중관·화승이중관 시트 기준 자동 구분</span>
+          </label>
         </div>
         <div class="team-prod-hub__grid" role="list">
           <div class="team-prod-hub__card" role="listitem" data-team-prod="drawing">
@@ -229,7 +281,7 @@
             </div>
             <p class="team-prod-hub__hint">「드로잉」 시트 기준</p>
             <label class="dropzone team-prod-hub__drop" id="teamProdDrawingDropzone">
-              <input type="file" id="teamProdDrawingFileInput" accept=".xlsx,.xls" hidden />
+              <input type="file" id="teamProdDrawingFileInput" accept=".xlsx,.xls" multiple hidden />
               <span class="dropzone__text">파일 선택 또는 드래그</span>
               <span class="dropzone__hint">.xlsx / .xls</span>
             </label>
@@ -241,7 +293,7 @@
             </div>
             <p class="team-prod-hub__hint">「페럴」 시트 기준</p>
             <label class="dropzone team-prod-hub__drop" id="teamProdParallelDropzone">
-              <input type="file" id="teamProdParallelFileInput" accept=".xlsx,.xls" hidden />
+              <input type="file" id="teamProdParallelFileInput" accept=".xlsx,.xls" multiple hidden />
               <span class="dropzone__text">파일 선택 또는 드래그</span>
               <span class="dropzone__hint">.xlsx / .xls</span>
             </label>
@@ -253,7 +305,7 @@
             </div>
             <p class="team-prod-hub__hint">머플러·단조머플러 시트</p>
             <label class="dropzone team-prod-hub__drop" id="teamProdMufflerDropzone">
-              <input type="file" id="teamProdMufflerFileInput" accept=".xlsx,.xls" hidden />
+              <input type="file" id="teamProdMufflerFileInput" accept=".xlsx,.xls" multiple hidden />
               <span class="dropzone__text">파일 선택 또는 드래그</span>
               <span class="dropzone__hint">.xlsx / .xls</span>
             </label>
@@ -265,7 +317,7 @@
             </div>
             <p class="team-prod-hub__hint">「이중관」 시트 기준</p>
             <label class="dropzone team-prod-hub__drop" id="teamProdDoublePipeDropzone">
-              <input type="file" id="teamProdDoublePipeFileInput" accept=".xlsx,.xls" hidden />
+              <input type="file" id="teamProdDoublePipeFileInput" accept=".xlsx,.xls" multiple hidden />
               <span class="dropzone__text">파일 선택 또는 드래그</span>
               <span class="dropzone__hint">.xlsx / .xls</span>
             </label>
@@ -277,7 +329,7 @@
             </div>
             <p class="team-prod-hub__hint">「화승이중관」 시트 기준</p>
             <label class="dropzone team-prod-hub__drop" id="teamProdHwaseungDropzone">
-              <input type="file" id="teamProdHwaseungFileInput" accept=".xlsx,.xls" hidden />
+              <input type="file" id="teamProdHwaseungFileInput" accept=".xlsx,.xls" multiple hidden />
               <span class="dropzone__text">파일 선택 또는 드래그</span>
               <span class="dropzone__hint">.xlsx / .xls</span>
             </label>

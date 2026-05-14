@@ -110,11 +110,12 @@
   const MUFFLER_DEFECT_COL_V = 21;
   const MUFFLER_DEFECT_PROC_DETAIL_COLS_AH_AL = [33, 34, 35, 36, 37];
 
-  const fileInput = document.getElementById("fileInput");
-  const dropzone = document.getElementById("dropzone");
+  const orderStockBulkFileInput = document.getElementById("orderStockBulkFileInput");
+  const orderStockBulkDropzone = document.getElementById("orderStockBulkDropzone");
+  const teamProdBulkFileInput = document.getElementById("teamProdBulkFileInput");
+  const teamProdBulkDropzone = document.getElementById("teamProdBulkDropzone");
   const fileNameEl = document.getElementById("fileName");
   const sheetInfoEl = document.getElementById("sheetInfo");
-  const stockFileInput = document.getElementById("stockFileInput");
   const stockFileNameEl = document.getElementById("stockFileName");
   const stockSheetInfoEl = document.getElementById("stockSheetInfo");
   const mappingBlock = document.getElementById("mappingBlock");
@@ -3479,13 +3480,13 @@
   }
 
   /**
-   * 「프린트·날짜가로」는 40일 창의 평일을 모두 열로 쓰는데, 엑셀 헤더에 없는 날은 board.dates에 없었다.
+   * 「프린트·날짜가로」는 오늘을 첫날로 잡고 오늘 포함 연속 37일(오늘 ~ 오늘+37일) 구간의 평일을 모두 열로 쓰는데, 엑셀 헤더에 없는 날은 board.dates에 없었다.
    * 그 경우 line.dates에 키가 없어 발주·부족이 0으로만 보이므로, 정렬·재고 누적용 날짜는 창과 합친다.
    * @param {NonNullable<typeof lastBoard>} board
    */
   function getExtendedBoardAlignDates(board) {
     if (!board || !board.dates || board.dates.length === 0) return board?.dates || [];
-    const transposeWeekdays = getDailyVisibleDates(board.dates, { windowDays: 40 }).filter((ymd) => !isWeekendYmd(ymd));
+    const transposeWeekdays = getDailyVisibleDates(board.dates, { windowDays: 37 }).filter((ymd) => !isWeekendYmd(ymd));
     return [...new Set([...board.dates, ...transposeWeekdays])].sort();
   }
 
@@ -5000,8 +5001,8 @@
       return;
     }
 
-    /* 이 화면만: 약 40일 + 토·일 제외 — 일별 통합표는 기존 한 달 로직 유지 */
-    const visibleDates = getDailyVisibleDates(board.dates, { windowDays: 40 }).filter((ymd) => !isWeekendYmd(ymd));
+    /* 이 화면만: 오늘을 첫날로 잡고, 오늘 포함 연속 37일(오늘 ~ 오늘+37일) 구간이 기본 후보 + 토·일 제외 — 일별 통합표는 기존 한 달 로직 유지 */
+    const visibleDates = getDailyVisibleDates(board.dates, { windowDays: 37 }).filter((ymd) => !isWeekendYmd(ymd));
     const packs = getFilteredProductPacks(board);
     const subs = getFilteredSubs();
     const exportSet = filterState.export.selected;
@@ -5047,7 +5048,7 @@
       /* noop */
     }
     table.style.setProperty("--transpose-gubun-col-px", "58px");
-    table.style.setProperty("--transpose-name-col-px", "118px");
+    table.style.setProperty("--transpose-name-col-px", "177px");
     table.style.setProperty("--transpose-date-col-px", `${dateColPx}px`);
 
     const colgroup = document.createElement("colgroup");
@@ -11686,12 +11687,52 @@
   }
 
   /**
+   * @param {FileList | File[] | null | undefined} fileList
+   * @returns {File[]}
+   */
+  function filterExcelFilesFromList(fileList) {
+    const a = [];
+    if (!fileList || !fileList.length) return a;
+    for (let i = 0; i < fileList.length; i++) {
+      const f = fileList[i];
+      if (!f || !f.name) continue;
+      const n = String(f.name).toLowerCase();
+      if (n.endsWith(".xlsx") || n.endsWith(".xls")) a.push(f);
+    }
+    return a;
+  }
+
+  /**
+   * 발주 업로드 화면 — 워크북을 발주 / 재고 / 팀 작업일지 / 미인식 으로 분류 (부작용 없음)
+   * @param {any} wb
+   * @returns {"order"|"stock"|"teamDrawing"|"teamParallel"|"teamDoublePipe"|"teamHwaseung"|"teamMuffler"|"unknown"}
+   */
+  function classifyWorkbookForOrderView(wb) {
+    if (findSheetName(wb)) return "order";
+    const stockSn = findStockSheetName(wb);
+    if (stockSn) {
+      const matrix = sheetToMatrix(wb, stockSn);
+      const parsed = extractStockData(matrix);
+      if (parsed.rowCount > 0) return "stock";
+    }
+    if (findDrawingLogSheetInWorkbook(wb)) return "teamDrawing";
+    if (findParallelLogSheetInWorkbook(wb)) return "teamParallel";
+    if (findDoublePipeLogSheetInWorkbook(wb)) return "teamDoublePipe";
+    if (findHwaseungDoublePipeLogSheetInWorkbook(wb)) return "teamHwaseung";
+    const muff = findMufflerLogSheetInWorkbook(wb);
+    if (muff && Array.isArray(muff.segments) && muff.segments.length) return "teamMuffler";
+    return "unknown";
+  }
+
+  /**
    * @param {any[][]} matrix
    * @param {any} [workbook]
+   * @param {(msg: string) => void} [sayFn]
    */
-  function processMatrix(matrix, workbook) {
+  function processMatrix(matrix, workbook, sayFn = alert) {
+    const say = typeof sayFn === "function" ? sayFn : alert;
     if (!matrix || matrix.length < 2) {
-      alert("데이터가 너무 적습니다. 「발주서 입력」 시트에 헤더와 데이터가 있는지 확인하세요.");
+      say("데이터가 너무 적습니다. 「발주서 입력」 시트에 헤더와 데이터가 있는지 확인하세요.");
       return;
     }
     rawRows = matrix;
@@ -11704,7 +11745,7 @@
       if (mappingBlock) mappingBlock.hidden = true;
       let board = buildBoardFromWide(matrix, wideSpec, hi);
       if (board.products.length === 0) {
-        alert("「발주서 입력」 시트에서 구분·품목코드·제품·날짜 열이 있는지 확인하세요.");
+        say("「발주서 입력」 시트에서 구분·품목코드·제품·날짜 열이 있는지 확인하세요.");
         clearOutputs();
         return;
       }
@@ -11727,7 +11768,7 @@
     fillSelect(colType, headers, guessed.type);
     fillSelect(colQty, headers, guessed.qty);
     fillSelect(colStock, headers, guessed.stock);
-    applyMapping();
+    applyMapping(say);
   }
 
   function readIndices() {
@@ -11741,13 +11782,17 @@
     };
   }
 
-  function applyMapping() {
+  /**
+   * @param {(msg: string) => void} [sayFn]
+   */
+  function applyMapping(sayFn = alert) {
+    const say = typeof sayFn === "function" ? sayFn : alert;
     if (!rawRows || dataMode !== "long") return;
     const idx = readIndices();
     const hi = detectOrderInputHeaderRowIndex(rawRows);
     const pivot = buildPivot(rawRows, idx, hi);
     if (!pivot || pivot.dates.length === 0) {
-      alert("날짜·제품명·발주량 열을 올바르게 지정했는지 확인하세요.");
+      say("날짜·제품명·발주량 열을 올바르게 지정했는지 확인하세요.");
       if (mappingBlock) mappingBlock.hidden = false;
       lastBoard = null;
       orderCalendarNeedsSync = true;
@@ -11775,92 +11820,90 @@
     flashOrderBoardUploadOk();
   }
 
-  async function handleFile(file) {
-    if (!file) return;
+  /**
+   * 이미 연 워크북으로 발주 화면 반영 (팀 작업일지는 화면 전환 없이 처리)
+   * @param {any} wb
+   * @param {File} file
+   * @param {(msg: string) => void} [sayFn]
+   */
+  function ingestOrderViewWorkbook(wb, file, sayFn = alert) {
+    const say = typeof sayFn === "function" ? sayFn : alert;
     lastFileName = file.name;
     fileNameEl.textContent = file.name;
-
-    try {
-      const buf = await loadArrayBuffer(file);
-      const wb = XLSX.read(buf, { type: "array", cellDates: true });
-      lastWorkbook = wb;
-      const sheetName = findSheetName(wb);
-      if (!sheetName) {
-        if (tryConsumeWorkbookAsDrawingLog(wb, file.name)) {
-          fileNameEl.textContent = `${file.name} (작업일지)`;
-          sheetInfoEl.textContent =
-            "「발주서 입력」 시트는 없고, 드로잉 작업일지로 인식했습니다. 좌측 「드로잉」에서 언제든 다시 볼 수 있습니다.";
-          lastWorkbook = null;
-          return;
-        }
-        if (tryConsumeWorkbookAsParallelLog(wb, file.name)) {
-          fileNameEl.textContent = `${file.name} (페럴 작업일지)`;
-          sheetInfoEl.textContent =
-            "「발주서 입력」 시트는 없고, 페럴 작업일지로 인식했습니다. 좌측 「페럴」에서 언제든 다시 볼 수 있습니다.";
-          lastWorkbook = null;
-          return;
-        }
-        if (tryConsumeWorkbookAsDoublePipeLog(wb, file.name)) {
-          fileNameEl.textContent = `${file.name} (이중관 작업일지)`;
-          sheetInfoEl.textContent =
-            "「발주서 입력」 시트는 없고, 이중관 작업일지로 인식했습니다. 좌측 「이중관」작업일지에서 언제든 다시 볼 수 있습니다.";
-          lastWorkbook = null;
-          return;
-        }
-        if (tryConsumeWorkbookAsHwaseungDoublePipeLog(wb, file.name)) {
-          fileNameEl.textContent = `${file.name} (화승 이중관 작업일지)`;
-          sheetInfoEl.textContent =
-            "「발주서 입력」 시트는 없고, 화승 이중관 작업일지로 인식했습니다. 좌측 「화승이중관」에서 언제든 다시 볼 수 있습니다.";
-          lastWorkbook = null;
-          return;
-        }
-        if (tryConsumeWorkbookAsMufflerLog(wb, file.name)) {
-          fileNameEl.textContent = `${file.name} (머플러 작업일지)`;
-          sheetInfoEl.textContent =
-            "「발주서 입력」 시트는 없고, 머플러 작업일지로 인식했습니다. 좌측 「머플러」에서 언제든 다시 볼 수 있습니다.";
-          lastWorkbook = null;
-          return;
-        }
-        const avail = (wb.SheetNames || []).join(", ");
-        alert(
-          `「${SHEET_TARGET}」 시트를 찾을 수 없습니다.\n` +
-            (avail ? `파일의 시트: ${avail}` : "시트가 없습니다.") +
-            "\n\n작업일지라면 좌측 「드로잉」「페럴」「이중관」「화승이중관」「머플러」화면에서 올려 주세요."
-        );
-        sheetInfoEl.textContent = "";
+    lastWorkbook = wb;
+    const sheetName = findSheetName(wb);
+    if (!sheetName) {
+      if (tryConsumeWorkbookAsDrawingLog(wb, file.name, { navigate: false })) {
+        fileNameEl.textContent = `${file.name} (작업일지)`;
+        sheetInfoEl.textContent =
+          "「발주서 입력」 시트는 없고, 드로잉 작업일지로 인식했습니다. 좌측 「드로잉」에서 언제든 다시 볼 수 있습니다.";
         lastWorkbook = null;
         return;
       }
-      const pastNm = findPastOrderSheetName(wb);
-      sheetInfoEl.textContent =
-        `발주서 입력: ${sheetName}` + (pastNm ? ` · 지난발주서: ${pastNm}` : " (지난발주서 시트 없음)");
-      const matrix = sheetToMatrix(wb, sheetName);
-      processMatrix(matrix, wb);
-    } catch (e) {
-      console.error(e);
-      alert("파일을 읽는 중 오류가 났습니다. 엑셀 형식인지 확인해 주세요.");
+      if (tryConsumeWorkbookAsParallelLog(wb, file.name, { navigate: false })) {
+        fileNameEl.textContent = `${file.name} (페럴 작업일지)`;
+        sheetInfoEl.textContent =
+          "「발주서 입력」 시트는 없고, 페럴 작업일지로 인식했습니다. 좌측 「페럴」에서 언제든 다시 볼 수 있습니다.";
+        lastWorkbook = null;
+        return;
+      }
+      if (tryConsumeWorkbookAsDoublePipeLog(wb, file.name, { navigate: false })) {
+        fileNameEl.textContent = `${file.name} (이중관 작업일지)`;
+        sheetInfoEl.textContent =
+          "「발주서 입력」 시트는 없고, 이중관 작업일지로 인식했습니다. 좌측 「이중관」작업일지에서 언제든 다시 볼 수 있습니다.";
+        lastWorkbook = null;
+        return;
+      }
+      if (tryConsumeWorkbookAsHwaseungDoublePipeLog(wb, file.name, { navigate: false })) {
+        fileNameEl.textContent = `${file.name} (화승 이중관 작업일지)`;
+        sheetInfoEl.textContent =
+          "「발주서 입력」 시트는 없고, 화승 이중관 작업일지로 인식했습니다. 좌측 「화승이중관」에서 언제든 다시 볼 수 있습니다.";
+        lastWorkbook = null;
+        return;
+      }
+      if (tryConsumeWorkbookAsMufflerLog(wb, file.name, { navigate: false })) {
+        fileNameEl.textContent = `${file.name} (머플러 작업일지)`;
+        sheetInfoEl.textContent =
+          "「발주서 입력」 시트는 없고, 머플러 작업일지로 인식했습니다. 좌측 「머플러」에서 언제든 다시 볼 수 있습니다.";
+        lastWorkbook = null;
+        return;
+      }
+      const avail = (wb.SheetNames || []).join(", ");
+      say(
+        `「${SHEET_TARGET}」 시트를 찾을 수 없습니다.\n` +
+          (avail ? `파일의 시트: ${avail}` : "시트가 없습니다.") +
+          "\n\n작업일지라면 시트 이름·헤더를 확인해 주세요."
+      );
+      sheetInfoEl.textContent = "";
+      lastWorkbook = null;
+      return;
     }
+    const pastNm = findPastOrderSheetName(wb);
+    sheetInfoEl.textContent =
+      `발주서 입력: ${sheetName}` + (pastNm ? ` · 지난발주서: ${pastNm}` : " (지난발주서 시트 없음)");
+    const matrix = sheetToMatrix(wb, sheetName);
+    processMatrix(matrix, wb, say);
   }
 
   /**
+   * @param {any} wb
    * @param {File} file
+   * @param {(msg: string) => void} [sayFn]
    */
-  async function handleStockFile(file) {
-    if (!file) return;
+  function ingestStockWorkbook(wb, file, sayFn = alert) {
+    const say = typeof sayFn === "function" ? sayFn : alert;
     if (stockFileNameEl) stockFileNameEl.textContent = `재고파일: ${file.name}`;
     try {
-      const buf = await loadArrayBuffer(file);
-      const wb = XLSX.read(buf, { type: "array", cellDates: true });
       const sheetName = findStockSheetName(wb);
       if (!sheetName) {
-        alert("재고파일에서 시트를 찾지 못했습니다.");
+        say("재고파일에서 시트를 찾지 못했습니다.");
         if (stockSheetInfoEl) stockSheetInfoEl.textContent = "";
         return;
       }
       const matrix = sheetToMatrix(wb, sheetName);
       const parsed = extractStockData(matrix);
       if (parsed.rowCount === 0) {
-        alert("재고파일에서 품목코드/제품명/재고수량 데이터를 읽지 못했습니다. 헤더를 확인해 주세요.");
+        say("재고파일에서 품목코드/제품명/재고수량 데이터를 읽지 못했습니다. 헤더를 확인해 주세요.");
         if (stockSheetInfoEl) stockSheetInfoEl.textContent = "";
         renderStockTableView();
         return;
@@ -11878,8 +11921,114 @@
       }
     } catch (e) {
       console.error(e);
-      alert("재고파일을 읽는 중 오류가 났습니다. 엑셀 형식인지 확인해 주세요.");
+      say("재고파일을 읽는 중 오류가 났습니다. 엑셀 형식인지 확인해 주세요.");
     }
+  }
+
+  /**
+   * @param {FileList | File[]} fileList
+   */
+  async function handleOrderViewBulkFiles(fileList) {
+    const files = filterExcelFilesFromList(fileList);
+    if (!files.length) {
+      if (fileList && fileList.length) alert("엑셀 파일(.xlsx / .xls)만 올릴 수 있습니다.");
+      return;
+    }
+    const issues = [];
+    /** @type {{ file: File, wb: any, kind: string }[]} */
+    const items = [];
+    for (const file of files) {
+      try {
+        const buf = await loadArrayBuffer(file);
+        const wb = XLSX.read(buf, { type: "array", cellDates: true });
+        items.push({ file, wb, kind: classifyWorkbookForOrderView(wb) });
+      } catch (e) {
+        console.error(e);
+        issues.push(`${file.name}: 파일을 읽는 중 오류가 났습니다.`);
+      }
+    }
+    const orderItems = items.filter((i) => i.kind === "order");
+    const stockItems = items.filter((i) => i.kind === "stock");
+    const teamKinds = new Set(["teamDrawing", "teamParallel", "teamDoublePipe", "teamHwaseung", "teamMuffler"]);
+    const teamItems = items.filter((i) => teamKinds.has(i.kind));
+    const unknownItems = items.filter((i) => i.kind === "unknown");
+
+    for (const it of orderItems) {
+      const sayF = (msg) => issues.push(`${it.file.name}: ${msg}`);
+      ingestOrderViewWorkbook(it.wb, it.file, sayF);
+    }
+    for (const it of stockItems) {
+      const sayF = (msg) => issues.push(`${it.file.name}: ${msg}`);
+      ingestStockWorkbook(it.wb, it.file, sayF);
+    }
+    for (const it of teamItems) {
+      const sayF = (msg) => issues.push(`${it.file.name}: ${msg}`);
+      ingestOrderViewWorkbook(it.wb, it.file, sayF);
+    }
+    for (const it of unknownItems) {
+      issues.push(`${it.file.name}: 발주·재고·작업일지로 인식되지 않습니다.`);
+    }
+
+    if (issues.length) alert(issues.join("\n"));
+  }
+
+  /**
+   * 생산 업로드 허브 — 시트 기준으로 팀 자동 배치 (화면 전환 없음)
+   * @param {any} wb
+   * @param {File} file
+   * @param {(msg: string) => void} [sayFn]
+   */
+  function routeTeamProductionWorkbook(wb, file, sayFn = alert) {
+    const say = typeof sayFn === "function" ? sayFn : alert;
+    if (tryConsumeWorkbookAsDrawingLog(wb, file.name, { navigate: false })) {
+      markTeamProdHubUploadOk("drawing", file.name);
+      if (currentView === "planVsActual") renderPlanVsActualPanel();
+      return;
+    }
+    if (tryConsumeWorkbookAsParallelLog(wb, file.name, { navigate: false })) {
+      markTeamProdHubUploadOk("parallel", file.name);
+      if (currentView === "planVsActual") renderPlanVsActualPanel();
+      return;
+    }
+    if (tryConsumeWorkbookAsDoublePipeLog(wb, file.name, { navigate: false })) {
+      markTeamProdHubUploadOk("doublePipe", file.name);
+      if (currentView === "planVsActual") renderPlanVsActualPanel();
+      return;
+    }
+    if (tryConsumeWorkbookAsHwaseungDoublePipeLog(wb, file.name, { navigate: false })) {
+      markTeamProdHubUploadOk("hwaseung", file.name);
+      if (currentView === "planVsActual") renderPlanVsActualPanel();
+      return;
+    }
+    if (tryConsumeWorkbookAsMufflerLog(wb, file.name, { navigate: false })) {
+      markTeamProdHubUploadOk("muffler", file.name);
+      if (currentView === "planVsActual") renderPlanVsActualPanel();
+      return;
+    }
+    say(`${file.name}: 드로잉·페럴·머플러·이중관·화승이중관 작업일지로 인식되지 않습니다.`);
+  }
+
+  /**
+   * @param {FileList | File[]} fileList
+   */
+  async function handleTeamProdBulkFiles(fileList) {
+    const files = filterExcelFilesFromList(fileList);
+    if (!files.length) {
+      if (fileList && fileList.length) alert("엑셀 파일(.xlsx / .xls)만 올릴 수 있습니다.");
+      return;
+    }
+    const issues = [];
+    for (const file of files) {
+      try {
+        const buf = await loadArrayBuffer(file);
+        const wb = XLSX.read(buf, { type: "array", cellDates: true });
+        routeTeamProductionWorkbook(wb, file, (msg) => issues.push(msg));
+      } catch (e) {
+        console.error(e);
+        issues.push(`${file.name}: 파일을 읽는 중 오류가 났습니다.`);
+      }
+    }
+    if (issues.length) alert(issues.join("\n"));
   }
 
   async function handleStockUnitPriceFile(file) {
@@ -11931,15 +12080,38 @@
     }
   }
 
-  fileInput.addEventListener("change", () => {
-    const f = fileInput.files && fileInput.files[0];
-    if (f) handleFile(f);
-    fileInput.value = "";
+  function bindMultiFileDropzone(dropzoneEl, inputEl, onFiles) {
+    if (!inputEl || !onFiles) return;
+    inputEl.addEventListener("change", () => {
+      const raw = inputEl.files && inputEl.files.length ? Array.from(inputEl.files) : [];
+      inputEl.value = "";
+      if (!raw.length) return;
+      onFiles(raw);
+    });
+    if (!dropzoneEl) return;
+    ["dragenter", "dragover"].forEach((ev) => {
+      dropzoneEl.addEventListener(ev, (e) => {
+        e.preventDefault();
+        dropzoneEl.classList.add("dragover");
+      });
+    });
+    ["dragleave", "drop"].forEach((ev) => {
+      dropzoneEl.addEventListener(ev, (e) => {
+        e.preventDefault();
+        dropzoneEl.classList.remove("dragover");
+      });
+    });
+    dropzoneEl.addEventListener("drop", (e) => {
+      const raw = e.dataTransfer.files && e.dataTransfer.files.length ? Array.from(e.dataTransfer.files) : [];
+      if (raw.length) onFiles(raw);
+    });
+  }
+
+  bindMultiFileDropzone(orderStockBulkDropzone, orderStockBulkFileInput, (raw) => {
+    handleOrderViewBulkFiles(raw);
   });
-  stockFileInput.addEventListener("change", () => {
-    const f = stockFileInput.files && stockFileInput.files[0];
-    if (f) handleStockFile(f);
-    stockFileInput.value = "";
+  bindMultiFileDropzone(teamProdBulkDropzone, teamProdBulkFileInput, (raw) => {
+    handleTeamProdBulkFiles(raw);
   });
 
   if (stockUnitPriceFileInput) {
@@ -11999,9 +12171,19 @@
   function bindTeamProdHubPair(dropzone, input, handler) {
     if (!input) return;
     input.addEventListener("change", () => {
-      const f = input.files && input.files[0];
-      if (f) handler(f);
+      const raw = input.files && input.files.length ? Array.from(input.files) : [];
       input.value = "";
+      if (!raw.length) return;
+      const excel = filterExcelFilesFromList(raw);
+      if (raw.length && !excel.length) {
+        alert("엑셀 파일(.xlsx / .xls)만 올릴 수 있습니다.");
+        return;
+      }
+      if (excel.length > 1) {
+        handleTeamProdBulkFiles(excel);
+        return;
+      }
+      handler(excel[0]);
     });
     if (!dropzone) return;
     ["dragenter", "dragover"].forEach((ev) => {
@@ -12017,8 +12199,18 @@
       });
     });
     dropzone.addEventListener("drop", (e) => {
-      const f = e.dataTransfer.files && e.dataTransfer.files[0];
-      if (f) handler(f);
+      const raw = e.dataTransfer.files && e.dataTransfer.files.length ? Array.from(e.dataTransfer.files) : [];
+      if (!raw.length) return;
+      const excel = filterExcelFilesFromList(raw);
+      if (raw.length && !excel.length) {
+        alert("엑셀 파일(.xlsx / .xls)만 올릴 수 있습니다.");
+        return;
+      }
+      if (excel.length > 1) {
+        handleTeamProdBulkFiles(excel);
+        return;
+      }
+      handler(excel[0]);
     });
   }
 
@@ -12426,23 +12618,6 @@
     });
   }
 
-  ["dragenter", "dragover"].forEach((ev) => {
-    dropzone.addEventListener(ev, (e) => {
-      e.preventDefault();
-      dropzone.classList.add("dragover");
-    });
-  });
-  ["dragleave", "drop"].forEach((ev) => {
-    dropzone.addEventListener(ev, (e) => {
-      e.preventDefault();
-      dropzone.classList.remove("dragover");
-    });
-  });
-  dropzone.addEventListener("drop", (e) => {
-    const f = e.dataTransfer.files && e.dataTransfer.files[0];
-    if (f) handleFile(f);
-  });
-
   btnApply.addEventListener("click", applyMapping);
   btnExport.addEventListener("click", () => {
     if (lastBoard) exportBoard(lastBoard);
@@ -12844,7 +13019,7 @@
     };
     const cs = getComputedStyle(srcTable);
     const wGubun = parseCssPx(cs.getPropertyValue("--transpose-gubun-col-px")) || 58;
-    const wName = parseCssPx(cs.getPropertyValue("--transpose-name-col-px")) || 118;
+    const wName = parseCssPx(cs.getPropertyValue("--transpose-name-col-px")) || 177;
     const wDate = parseCssPx(cs.getPropertyValue("--transpose-date-col-px")) || 49;
     const thWidths = ths.map((_, i) => (i === 0 ? wGubun : i === 1 ? wName : wDate));
     const fixedW = wGubun + wName;
