@@ -22,6 +22,12 @@
   /** 재고 전용 엑셀 — 카테고리·분류 열 (일별 통합표 「타입」과 별도) */
   const STOCK_CATEGORY_KEYS = ["카테고리", "category", "분류", "대분류", "제품군", "상품군", "구분", "종류"];
 
+  /**
+   * 날짜 셀을 JS Date로 풀지 않음 → 브라우저/타임존마다 하루 밀리는 문제를 줄임.
+   * 달력 변환은 전부 `parseExcelDate`에서 시리얼·문자열 기준으로 통일합니다.
+   */
+  const XLSX_READ_ARRAY_OPTS = { type: "array", cellDates: false };
+
   /** 드로잉팀 — 타입 열 값 기준(부분 일치). 이중관·화승이중관 구분을 위해 긴 키워드 우선 */
   const DRAWING_TEAM_SEGMENTS = ["드로잉", "페럴", "머플러", "이중관", "화승이중관"];
 
@@ -3690,6 +3696,70 @@
   }
 
   /**
+   * 팀 작업일지: `findHeaderIndex` + `matchHeader`가 짧은 키로 먼저 매칭되면
+   * 「공정구분」이 「공정」보다 앞서 잡혀 가공/성형이 전부 기타로 가는 문제를 막습니다.
+   */
+  function findTeamLogProcessColumnIndex(headerRow) {
+    const exactOrder = ["공정", "작업공정", "공정명", "세부공정", "공정구분", "작업구분"];
+    for (const lab of exactOrder) {
+      const i = findExactHeaderIndex(headerRow, [lab]);
+      if (i >= 0) return i;
+    }
+    const loose = ["작업공정", "공정명", "세부공정", "공정구분", "작업구분", "공정"];
+    const sorted = [...new Set(loose)].sort((a, b) => {
+      const la = norm(a).length;
+      const lb = norm(b).length;
+      if (lb !== la) return lb - la;
+      return String(a).localeCompare(String(b), "ko");
+    });
+    for (let i = 0; i < headerRow.length; i++) {
+      const h = norm(String(headerRow[i] ?? ""));
+      if (!h) continue;
+      for (const k of sorted) {
+        const nk = norm(k);
+        if (h === nk || h.includes(nk)) return i;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * 팀 작업일지 작업일: 「계획생산일」이 「생산일」 부분일치로 먼저 잡히는 등 오탐을 줄입니다.
+   */
+  function findTeamLogWorkDateColumnIndex(headerRow) {
+    const exactOrder = ["작업일자", "작업일", "납기일", "발주일", "주문일", "생산일", "날짜", "일자", "date", "plan"];
+    for (const lab of exactOrder) {
+      const i = findExactHeaderIndex(headerRow, [lab]);
+      if (i >= 0) return i;
+    }
+    const partialKeys = ["작업일자", "작업일", "납기일", "발주일", "주문일", "날짜", "일자"];
+    const sorted = [...new Set(partialKeys)].sort((a, b) => {
+      const la = norm(a).length;
+      const lb = norm(b).length;
+      if (lb !== la) return lb - la;
+      return String(a).localeCompare(String(b), "ko");
+    });
+    for (let i = 0; i < headerRow.length; i++) {
+      const h = norm(String(headerRow[i] ?? ""));
+      if (!h) continue;
+      for (const k of sorted) {
+        const nk = norm(k);
+        if (h === nk || (nk.length >= 3 && h.includes(nk))) return i;
+      }
+    }
+    for (const k of DATE_KEYS) {
+      const nk = norm(k);
+      if (nk === "생산일") continue;
+      for (let i = 0; i < headerRow.length; i++) {
+        const h = norm(String(headerRow[i] ?? ""));
+        if (!h) continue;
+        if (h === nk || (nk.length >= 4 && h.includes(nk))) return i;
+      }
+    }
+    return -1;
+  }
+
+  /**
    * 단가 열 — `matchHeader("단가")`가 `표준단가`에도 먼저 걸려 개당단가(27.45) 대신 표준단가(150)를 읽는 경우를 막기 위해
    * 「개당단가」류를 최우선으로 한 뒤, 표준/평균, 마지막에 일반 「단가」만 사용합니다.
    */
@@ -3930,7 +4000,7 @@
     return Number.isFinite(n) ? n : 0;
   }
 
-  /** 엑셀 1900 날짜 계열(시리얼) → UTC 기준 달력일 (타임존으로 하루 밀리는 것 방지) */
+  /** 엑셀 1900 날짜 계열(시리얼) → UTC 기준 달력일 (정수 시리얼 = 엑셀 달력 하루) */
   function ymdFromExcelSerial(serial) {
     if (typeof serial !== "number" || !Number.isFinite(serial)) return "";
     const epochMs = Date.UTC(1899, 11, 30) + serial * 86400000;
@@ -3941,20 +4011,60 @@
     return `${y}-${m}-${day}`;
   }
 
+  /** `YYYY-MM-DD` 문자열을 그대로 달력으로 쓸 때(ISO만 UTC로 파싱하면 하루 밀림 방지) */
+  function ymdFromCalendarParts(y, mo, d) {
+    const yi = Math.trunc(y);
+    const mi = Math.trunc(mo);
+    const di = Math.trunc(d);
+    if (yi < 1900 || yi > 2100 || mi < 1 || mi > 12 || di < 1 || di > 31) return "";
+    const trial = new Date(yi, mi - 1, di);
+    if (Number.isNaN(trial.getTime())) return "";
+    if (trial.getFullYear() !== yi || trial.getMonth() !== mi - 1 || trial.getDate() !== di) return "";
+    return `${yi}-${String(mi).padStart(2, "0")}-${String(di).padStart(2, "0")}`;
+  }
+
+  /**
+   * 엑셀·표 셀 값 → `YYYY-MM-DD`. `cellDates:false`일 때 날짜는 숫자 시리얼로 오는 것을 기준으로 함.
+   */
   function parseExcelDate(v) {
     if (v instanceof Date && !Number.isNaN(v.getTime())) {
+      if (
+        v.getUTCHours() === 0 &&
+        v.getUTCMinutes() === 0 &&
+        v.getUTCSeconds() === 0 &&
+        v.getUTCMilliseconds() === 0
+      ) {
+        return `${v.getUTCFullYear()}-${String(v.getUTCMonth() + 1).padStart(2, "0")}-${String(v.getUTCDate()).padStart(2, "0")}`;
+      }
       return formatYmd(v);
     }
-    if (typeof v === "number" && v > 20000 && v < 65000) {
-      return ymdFromExcelSerial(v);
+    if (typeof v === "number" && Number.isFinite(v) && v > 20000 && v < 65000) {
+      return ymdFromExcelSerial(Math.floor(v + 1e-9));
     }
     const s = String(v ?? "").trim();
     if (!s) return "";
-    if (/^\d{5}(\.\d+)?$/.test(s)) {
-      const n = parseFloat(s);
-      if (n > 20000 && n < 65000) {
-        return ymdFromExcelSerial(n);
-      }
+    const mYmd = s.match(/^(\d{4})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{1,2})/);
+    if (mYmd) {
+      const y = parseInt(mYmd[1], 10);
+      const mo = parseInt(mYmd[2], 10);
+      const d = parseInt(mYmd[3], 10);
+      const out = ymdFromCalendarParts(y, mo, d);
+      if (out) return out;
+    }
+    const mKr = s.match(/^(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
+    if (mKr) {
+      const out = ymdFromCalendarParts(parseInt(mKr[1], 10), parseInt(mKr[2], 10), parseInt(mKr[3], 10));
+      if (out) return out;
+    }
+    const mDmy = s.match(/^(\d{1,2})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{4})$/);
+    if (mDmy) {
+      const out = ymdFromCalendarParts(parseInt(mDmy[3], 10), parseInt(mDmy[2], 10), parseInt(mDmy[1], 10));
+      if (out) return out;
+    }
+    const numLike = s.replace(/,/g, "").replace(/\s+/g, "");
+    if (/^\d+(\.\d+)?$/.test(numLike)) {
+      const n = parseFloat(numLike);
+      if (n > 20000 && n < 65000) return ymdFromExcelSerial(Math.floor(n + 1e-9));
     }
     const d = new Date(s);
     if (!Number.isNaN(d.getTime())) return formatYmd(d);
@@ -6610,7 +6720,7 @@
     const hi = detectHeaderRowIndex(matrix);
     const headerRow = matrix[hi] || [];
 
-    const iWorkDate = findHeaderIndex(headerRow, ["작업일자", "작업일", ...DATE_KEYS]);
+    const iWorkDate = findTeamLogWorkDateColumnIndex(headerRow);
     const iSpec = findHeaderIndex(headerRow, ["규격"]);
     const iProdQty = findDrawingProductionQtyColumnIndex(headerRow);
     const iWorkTime = findHeaderIndex(headerRow, ["작업시간", "작업 시간"]);
@@ -6778,7 +6888,7 @@
     const hi = detectHeaderRowIndex(matrix);
     const headerRow = matrix[hi] || [];
 
-    const iWorkDate = findHeaderIndex(headerRow, ["작업일자", "작업일", ...DATE_KEYS]);
+    const iWorkDate = findTeamLogWorkDateColumnIndex(headerRow);
     const iSpec = findHeaderIndex(headerRow, ["규격"]);
     let iProdQty = findHeaderIndex(headerRow, ["생산량(ERP)", "생산량（ERP）", "생산량(erp)"]);
     if (iProdQty < 0) iProdQty = findDrawingProductionQtyColumnIndex(headerRow);
@@ -6794,14 +6904,7 @@
     const iOee = findOeeColumnIndex(headerRow);
     const iDefRate = findDefectRateColumnIndex(headerRow);
 
-    const iProcess = findHeaderIndex(headerRow, [
-      "공정",
-      "작업공정",
-      "공정명",
-      "세부공정",
-      "공정구분",
-      "작업구분",
-    ]);
+    const iProcess = findTeamLogProcessColumnIndex(headerRow);
 
     const hasCore =
       iWorkDate >= 0 ||
@@ -7017,7 +7120,7 @@
     const hi = detectHeaderRowIndex(matrix);
     const headerRow = matrix[hi] || [];
 
-    const iWorkDate = findHeaderIndex(headerRow, ["작업일자", "작업일", ...DATE_KEYS]);
+    const iWorkDate = findTeamLogWorkDateColumnIndex(headerRow);
     const iSpec = findHeaderIndex(headerRow, ["규격"]);
     let iProdQty = findHeaderIndex(headerRow, ["생산량(ERP)", "생산량（ERP）", "생산량(erp)", "생산수량", "생산 수량", "생산량"]);
     if (iProdQty < 0) iProdQty = findDrawingProductionQtyColumnIndex(headerRow);
@@ -7036,14 +7139,7 @@
     const iOee = findOeeColumnIndex(headerRow);
     const iDefRate = findDefectRateColumnIndex(headerRow);
 
-    const iProcess = findHeaderIndex(headerRow, [
-      "공정",
-      "작업공정",
-      "공정명",
-      "세부공정",
-      "공정구분",
-      "작업구분",
-    ]);
+    const iProcess = findTeamLogProcessColumnIndex(headerRow);
 
     const hasCore =
       iWorkDate >= 0 ||
@@ -7253,7 +7349,7 @@
       HWASEUNG_DEFECT_PROCESS_AK_AL_AR[HWASEUNG_DEFECT_PROCESS_AK_AL_AR.length - 1] + 1
     );
 
-    let iWorkDate = findHeaderIndex(headerRow, ["작업일자", "작업일", ...DATE_KEYS]);
+    let iWorkDate = findTeamLogWorkDateColumnIndex(headerRow);
     if (iWorkDate < 0 && layoutWidth > 5) {
       let ok = 0;
       let trials = 0;
@@ -7289,14 +7385,7 @@
     const iOee = findOeeColumnIndex(headerRow);
     const iDefRate = findDefectRateColumnIndex(headerRow);
 
-    const iProcess = findHeaderIndex(headerRow, [
-      "공정",
-      "작업공정",
-      "공정명",
-      "세부공정",
-      "공정구분",
-      "작업구분",
-    ]);
+    const iProcess = findTeamLogProcessColumnIndex(headerRow);
 
     const hasCore =
       iWorkDate >= 0 ||
@@ -7493,7 +7582,7 @@
     const hi = detectHeaderRowIndex(matrix);
     const headerRow = matrix[hi] || [];
 
-    const iWorkDate = findHeaderIndex(headerRow, ["작업일자", "작업일", ...DATE_KEYS]);
+    const iWorkDate = findTeamLogWorkDateColumnIndex(headerRow);
     const iSpec = findHeaderIndex(headerRow, ["규격"]);
     let iProdQty = findHeaderIndex(headerRow, [
       "생산수량",
@@ -7523,14 +7612,7 @@
     const iOee = findOeeColumnIndex(headerRow);
     const iDefRate = findDefectRateColumnIndex(headerRow);
 
-    const iProcess = findHeaderIndex(headerRow, [
-      "공정",
-      "작업공정",
-      "공정명",
-      "세부공정",
-      "공정구분",
-      "작업구분",
-    ]);
+    const iProcess = findTeamLogProcessColumnIndex(headerRow);
 
     const hasCore =
       iWorkDate >= 0 ||
@@ -11094,7 +11176,7 @@
     if (!file) return;
     try {
       const buf = await loadArrayBuffer(file);
-      const wb = XLSX.read(buf, { type: "array", cellDates: true });
+      const wb = XLSX.read(buf, XLSX_READ_ARRAY_OPTS);
       const ok = tryConsumeWorkbookAsMufflerLog(wb, file.name, { navigate });
       if (!ok) {
         alert(
@@ -11152,7 +11234,7 @@
     if (!file) return;
     try {
       const buf = await loadArrayBuffer(file);
-      const wb = XLSX.read(buf, { type: "array", cellDates: true });
+      const wb = XLSX.read(buf, XLSX_READ_ARRAY_OPTS);
       const ok = tryConsumeWorkbookAsDrawingLog(wb, file.name, { navigate });
       if (!ok) {
         alert(
@@ -11210,7 +11292,7 @@
     if (!file) return;
     try {
       const buf = await loadArrayBuffer(file);
-      const wb = XLSX.read(buf, { type: "array", cellDates: true });
+      const wb = XLSX.read(buf, XLSX_READ_ARRAY_OPTS);
       const ok = tryConsumeWorkbookAsParallelLog(wb, file.name, { navigate });
       if (!ok) {
         alert(
@@ -11263,7 +11345,7 @@
     if (!file) return;
     try {
       const buf = await loadArrayBuffer(file);
-      const wb = XLSX.read(buf, { type: "array", cellDates: true });
+      const wb = XLSX.read(buf, XLSX_READ_ARRAY_OPTS);
       const ok = tryConsumeWorkbookAsDoublePipeLog(wb, file.name, { navigate });
       if (!ok) {
         alert(
@@ -11316,7 +11398,7 @@
     if (!file) return;
     try {
       const buf = await loadArrayBuffer(file);
-      const wb = XLSX.read(buf, { type: "array", cellDates: true });
+      const wb = XLSX.read(buf, XLSX_READ_ARRAY_OPTS);
       const ok = tryConsumeWorkbookAsHwaseungDoublePipeLog(wb, file.name, { navigate });
       if (!ok) {
         alert(
@@ -11847,17 +11929,17 @@
         lastWorkbook = null;
         return;
       }
-      if (tryConsumeWorkbookAsDoublePipeLog(wb, file.name, { navigate: false })) {
-        fileNameEl.textContent = `${file.name} (이중관 작업일지)`;
-        sheetInfoEl.textContent =
-          "「발주서 입력」 시트는 없고, 이중관 작업일지로 인식했습니다. 좌측 「이중관」작업일지에서 언제든 다시 볼 수 있습니다.";
-        lastWorkbook = null;
-        return;
-      }
       if (tryConsumeWorkbookAsHwaseungDoublePipeLog(wb, file.name, { navigate: false })) {
         fileNameEl.textContent = `${file.name} (화승 이중관 작업일지)`;
         sheetInfoEl.textContent =
           "「발주서 입력」 시트는 없고, 화승 이중관 작업일지로 인식했습니다. 좌측 「화승이중관」에서 언제든 다시 볼 수 있습니다.";
+        lastWorkbook = null;
+        return;
+      }
+      if (tryConsumeWorkbookAsDoublePipeLog(wb, file.name, { navigate: false })) {
+        fileNameEl.textContent = `${file.name} (이중관 작업일지)`;
+        sheetInfoEl.textContent =
+          "「발주서 입력」 시트는 없고, 이중관 작업일지로 인식했습니다. 좌측 「이중관」작업일지에서 언제든 다시 볼 수 있습니다.";
         lastWorkbook = null;
         return;
       }
@@ -11940,7 +12022,7 @@
     for (const file of files) {
       try {
         const buf = await loadArrayBuffer(file);
-        const wb = XLSX.read(buf, { type: "array", cellDates: true });
+        const wb = XLSX.read(buf, XLSX_READ_ARRAY_OPTS);
         items.push({ file, wb, kind: classifyWorkbookForOrderView(wb) });
       } catch (e) {
         console.error(e);
@@ -11990,13 +12072,15 @@
       if (currentView === "planVsActual") renderPlanVsActualPanel();
       return;
     }
-    if (tryConsumeWorkbookAsDoublePipeLog(wb, file.name, { navigate: false })) {
-      markTeamProdHubUploadOk("doublePipe", file.name);
+    // 한 파일에 「이중관」+「화승이중관」 시트가 같이 있을 때 이중관을 먼저 보면
+    // 이중관만 반영되고 화승이중관은 건너뛰게 됨. 일괄 업로드·화승 단독과 맞추려면 화승을 먼저 시도.
+    if (tryConsumeWorkbookAsHwaseungDoublePipeLog(wb, file.name, { navigate: false })) {
+      markTeamProdHubUploadOk("hwaseung", file.name);
       if (currentView === "planVsActual") renderPlanVsActualPanel();
       return;
     }
-    if (tryConsumeWorkbookAsHwaseungDoublePipeLog(wb, file.name, { navigate: false })) {
-      markTeamProdHubUploadOk("hwaseung", file.name);
+    if (tryConsumeWorkbookAsDoublePipeLog(wb, file.name, { navigate: false })) {
+      markTeamProdHubUploadOk("doublePipe", file.name);
       if (currentView === "planVsActual") renderPlanVsActualPanel();
       return;
     }
@@ -12021,7 +12105,7 @@
     for (const file of files) {
       try {
         const buf = await loadArrayBuffer(file);
-        const wb = XLSX.read(buf, { type: "array", cellDates: true });
+        const wb = XLSX.read(buf, XLSX_READ_ARRAY_OPTS);
         routeTeamProductionWorkbook(wb, file, (msg) => issues.push(msg));
       } catch (e) {
         console.error(e);
@@ -12037,7 +12121,7 @@
     if (stockUnitPriceFileName) stockUnitPriceFileName.textContent = file.name;
     try {
       const buf = await loadArrayBuffer(file);
-      const wb = XLSX.read(buf, { type: "array", cellDates: true });
+      const wb = XLSX.read(buf, XLSX_READ_ARRAY_OPTS);
       const { sheetName, parsed } = buildStockUnitPriceDataFromWorkbook(wb);
       if (!sheetName || !parsed || parsed.rowCount === 0) {
         lastStockUnitPriceData = null;
