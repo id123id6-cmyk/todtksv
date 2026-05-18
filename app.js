@@ -6894,13 +6894,13 @@
   }
 
   /**
-   * 「프린트·날짜가로」는 오늘을 첫날로 잡고 오늘 포함 연속 37일(오늘 ~ 오늘+37일) 구간의 평일을 모두 열로 쓰는데, 엑셀 헤더에 없는 날은 board.dates에 없었다.
+   * 「프린트·날짜가로」는 오늘을 첫날로 잡고 오늘 포함 36일(오늘 ~ 오늘+35일) 구간의 평일을 모두 열로 쓰는데, 엑셀 헤더에 없는 날은 board.dates에 없었다.
    * 그 경우 line.dates에 키가 없어 발주·부족이 0으로만 보이므로, 정렬·재고 누적용 날짜는 창과 합친다.
    * @param {NonNullable<typeof lastBoard>} board
    */
   function getExtendedBoardAlignDates(board) {
     if (!board || !board.dates || board.dates.length === 0) return board?.dates || [];
-    const transposeWeekdays = getDailyVisibleDates(board.dates, { windowDays: 37 }).filter((ymd) => !isWeekendYmd(ymd));
+    const transposeWeekdays = getDailyVisibleDates(board.dates, { windowDays: 36 }).filter((ymd) => !isWeekendYmd(ymd));
     return [...new Set([...board.dates, ...transposeWeekdays])].sort();
   }
 
@@ -8528,8 +8528,8 @@
       return;
     }
 
-    /* 이 화면만: 오늘을 첫날로 잡고, 오늘 포함 연속 37일(오늘 ~ 오늘+37일) 구간이 기본 후보 + 토·일 제외 — 일별 통합표는 기존 한 달 로직 유지 */
-    const visibleDates = getDailyVisibleDates(board.dates, { windowDays: 37 }).filter((ymd) => !isWeekendYmd(ymd));
+    /* 이 화면만: 오늘을 첫날로 잡고, 오늘 포함 36일(오늘 ~ 오늘+35일) 구간이 기본 후보 + 토·일 제외 — 일별 통합표는 기존 한 달 로직 유지 */
+    const visibleDates = getDailyVisibleDates(board.dates, { windowDays: 36 }).filter((ymd) => !isWeekendYmd(ymd));
     const packs = getFilteredProductPacks(board);
     const subs = getFilteredSubs();
     const exportSet = filterState.export.selected;
