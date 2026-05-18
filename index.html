@@ -26,6 +26,7 @@
         <div class="nav-group__title nav-group__title--section">데이터 입력</div>
         <button type="button" class="nav-item" data-view="upload">발주서 엑셀 업로드</button>
         <button type="button" class="nav-item nav-item--team-hub" data-view="teamProductionUpload">생산 엑셀 업로드</button>
+        <button type="button" class="nav-item" data-view="stockUnitPriceUpload">재고_단가 엑셀 업로드</button>
       </div>
       <div class="nav-group" role="group" aria-label="발주 · 재고">
         <div class="nav-group__title nav-group__title--section">발주 · 재고</div>
@@ -33,7 +34,6 @@
         <button type="button" class="nav-item nav-item--sub" data-view="dailyPrintTranspose">프린트 · 날짜가로(제품세로)</button>
         <button type="button" class="nav-item" data-view="orderCalendar">날짜별 발주 달력</button>
         <button type="button" class="nav-item" data-view="stockTable">재고</button>
-        <button type="button" class="nav-item" data-view="summary">요약</button>
       </div>
       <div class="nav-group" role="group" aria-label="생산 작업일지">
         <div class="nav-group__title nav-group__title--section">생산 작업일지</div>
@@ -43,10 +43,12 @@
         <button type="button" class="nav-item nav-item--sub" data-view="doublePipeLog">이중관</button>
         <button type="button" class="nav-item nav-item--sub" data-view="hwaseungDoublePipeLog">화승이중관</button>
       </div>
-      <div class="nav-group" role="group" aria-label="보고 · 출력">
-        <div class="nav-group__title nav-group__title--section">보고 · 출력</div>
+      <div class="nav-group" role="group" aria-label="주간보고">
+        <div class="nav-group__title nav-group__title--section">주간보고</div>
         <button type="button" class="nav-item nav-item--sub" data-view="planVsActual">계획대비 실적</button>
-        <button type="button" class="nav-item nav-item--sub" data-view="stockUnitPrice">재고 단가</button>
+        <button type="button" class="nav-item nav-item--sub" data-view="stockUnitPrice">재고금액 현황</button>
+        <button type="button" class="nav-item nav-item--sub" data-view="planVsActualByTeam">팀별 계획대비 실적</button>
+        <button type="button" class="nav-item nav-item--sub" data-view="shipmentVsStock">출하 예정 수량 대비 재고 보유수량</button>
       </div>
     </nav>
     <button type="button" class="sidebar-toggle-btn" id="btnSidebarToggle" aria-pressed="false" aria-label="사이드바 숨기기" title="사이드바 숨기기">◀</button>
@@ -68,7 +70,7 @@
           <p class="home-dashboard__intro-kicker">업무 시작</p>
           <h1 class="home-dashboard__intro-title">휘일 생산관리 통합 보드</h1>
           <p class="home-dashboard__intro-desc">
-            아래 순서대로 데이터를 넣고 보드·작업일지·보고 화면으로 이동하세요. 왼쪽 위 로고를 누르면 언제든 이 화면으로 돌아옵니다.
+            아래 순서대로 데이터를 넣고 보드·작업일지·주간보고 화면으로 이동하세요. 왼쪽 위 로고를 누르면 언제든 이 화면으로 돌아옵니다.
           </p>
         </header>
 
@@ -78,7 +80,7 @@
               <span class="home-flow-card__step" aria-hidden="true">1</span>
               <div class="home-flow-card__titles">
                 <h2 class="home-flow-card__title">데이터 입력</h2>
-                <p class="home-flow-card__desc">발주·재고 파일과 팀별 작업일지 엑셀을 반영합니다.</p>
+                <p class="home-flow-card__desc">발주·재고·재고_단가 파일과 팀별 작업일지 엑셀을 반영합니다.</p>
               </div>
             </div>
             <div class="home-flow-card__links">
@@ -92,6 +94,11 @@
                 <span class="home-flow-link__hint">팀 작업일지</span>
                 <span class="home-flow-link__chev" aria-hidden="true">→</span>
               </button>
+              <button type="button" class="home-flow-link" data-view="stockUnitPriceUpload">
+                <span>재고_단가 엑셀 업로드</span>
+                <span class="home-flow-link__hint">주간보고</span>
+                <span class="home-flow-link__chev" aria-hidden="true">→</span>
+              </button>
             </div>
           </article>
 
@@ -100,7 +107,7 @@
               <span class="home-flow-card__step" aria-hidden="true">2</span>
               <div class="home-flow-card__titles">
                 <h2 class="home-flow-card__title">발주 · 재고 확인</h2>
-                <p class="home-flow-card__desc">통합표·달력·재고·요약으로 수량과 부족을 확인합니다.</p>
+                <p class="home-flow-card__desc">통합표·달력·재고로 수량과 부족을 확인합니다.</p>
               </div>
             </div>
             <div class="home-flow-card__actions">
@@ -118,11 +125,6 @@
                 <button type="button" class="home-flow-link" data-view="stockTable">
                   <span>재고</span>
                   <span class="home-flow-link__hint">현재고</span>
-                  <span class="home-flow-link__chev" aria-hidden="true">→</span>
-                </button>
-                <button type="button" class="home-flow-link" data-view="summary">
-                  <span>요약</span>
-                  <span class="home-flow-link__hint">집계</span>
                   <span class="home-flow-link__chev" aria-hidden="true">→</span>
                 </button>
               </div>
@@ -168,8 +170,8 @@
             <div class="home-flow-card__head">
               <span class="home-flow-card__step" aria-hidden="true">4</span>
               <div class="home-flow-card__titles">
-                <h2 class="home-flow-card__title">보고 · 출력</h2>
-                <p class="home-flow-card__desc">계획 대비 실적·단가 반영·인쇄용 보기로 마무리합니다.</p>
+                <h2 class="home-flow-card__title">주간보고</h2>
+                <p class="home-flow-card__desc">계획 대비 실적·재고 금액·출하 대비 재고 등 주간 보고용 화면입니다.</p>
               </div>
             </div>
             <div class="home-flow-card__links">
@@ -179,13 +181,18 @@
                 <span class="home-flow-link__chev" aria-hidden="true">→</span>
               </button>
               <button type="button" class="home-flow-link" data-view="stockUnitPrice">
-                <span>재고 단가</span>
-                <span class="home-flow-link__hint">금액 산출</span>
+                <span>재고금액 현황</span>
+                <span class="home-flow-link__hint">금액</span>
                 <span class="home-flow-link__chev" aria-hidden="true">→</span>
               </button>
-              <button type="button" class="home-flow-link" data-view="dailyPrintTranspose">
-                <span>프린트 · 날짜가로(제품세로)</span>
-                <span class="home-flow-link__hint">인쇄</span>
+              <button type="button" class="home-flow-link" data-view="planVsActualByTeam">
+                <span>팀별 계획대비 실적</span>
+                <span class="home-flow-link__hint">팀별</span>
+                <span class="home-flow-link__chev" aria-hidden="true">→</span>
+              </button>
+              <button type="button" class="home-flow-link" data-view="shipmentVsStock">
+                <span>출하 예정 대비 재고</span>
+                <span class="home-flow-link__hint">수량</span>
                 <span class="home-flow-link__chev" aria-hidden="true">→</span>
               </button>
             </div>
@@ -335,6 +342,39 @@
             </label>
           </div>
         </div>
+      </div>
+    </section>
+
+    <section id="viewStockUnitPriceUpload" class="view" hidden>
+      <div class="panel panel--flush stock-unit-price-upload-hub">
+        <h2 class="view-title">재고_단가 엑셀 업로드</h2>
+        <p class="view-desc">
+          주간보고·<strong>일별 통합표</strong>의 <strong>재고 금액</strong>에 쓰는 단가 파일입니다.
+          <code>재고_단가.xlsx</code> 등 <strong>품목코드·품목명(또는 제품명)</strong>과 <strong>단가</strong>가 있으면
+          <strong>재고 × 단가</strong>(원 단위 반올림)로 금액이 채워집니다.
+          단가 열이 없고 <strong>매입기준액</strong>·<strong>현재고</strong>만 있으면 행마다 <strong>매입기준액 ÷ 현재고</strong>로 역산합니다.
+          여러 시트가 있으면 읽은 행 수가 가장 많은 시트를 사용합니다.
+        </p>
+        <div class="team-prod-hub__grid team-prod-hub__grid--single">
+          <div class="team-prod-hub__card" data-upload-zone="stockUnitPrice">
+            <div class="team-prod-hub__card-head">
+              <h3 class="team-prod-hub__name">재고_단가</h3>
+              <span class="team-prod-hub__status" hidden aria-live="polite"></span>
+            </div>
+            <p class="team-prod-hub__hint">품목코드 + 품목명(제품명)은 발주 보드와 동일하게 맞춰 주세요.</p>
+            <label class="dropzone team-prod-hub__drop" id="stockUnitPriceDropzone">
+              <input type="file" id="stockUnitPriceFileInput" accept=".xlsx,.xls" hidden />
+              <span class="dropzone__text">파일 선택 또는 드래그</span>
+              <span class="dropzone__hint">.xlsx / .xls</span>
+            </label>
+            <p class="file-name" id="stockUnitPriceFileName"></p>
+            <p class="sheet-info" id="stockUnitPriceSheetInfo"></p>
+          </div>
+        </div>
+        <p class="stock-unit-price-error" id="stockUnitPriceError" role="alert" hidden></p>
+        <p class="upload-hint">
+          발주 데이터를 이미 올린 뒤 이 파일만 다시 바꿔도 즉시 반영됩니다. 확인은 왼쪽 <strong>재고금액 현황</strong> 또는 <strong>일별 통합표</strong>에서 하세요.
+        </p>
       </div>
     </section>
 
@@ -810,9 +850,94 @@
     <section id="viewPlanVsActual" class="view" hidden>
       <div class="panel">
         <h2 class="view-title">계획대비 실적</h2>
+        <p class="view-desc view-desc--kicker">주간보고</p>
         <p class="view-desc">
-          <strong>표시할 공정</strong>은 <strong>드로잉 → 페럴 → 머플러 → 이중관 → 화승이중관</strong> 순으로 <strong>팀마다 한 줄</strong>이며, 왼쪽에 팀 표시를 두고 오른쪽에 공정 칩이 가로로 붙습니다. <strong>공정별</strong>일 때만 칩이 보입니다. 위에서 <strong>시작일·종료일</strong>을 고른 뒤 <strong>적용</strong>하면 표에 반영됩니다.
+          <strong>생산일지</strong>를 <strong>파일명 · 팀 · 공정</strong>별로 나눠 <strong>일·월·년</strong> 단위 실적을 뽑습니다. 엑셀처럼 <strong>필터</strong>로 보고 싶은 행·열만 골라 볼 수 있습니다. <strong>계획</strong>·<strong>달성률</strong>은 엑셀에 직접 넣으세요.
         </p>
+        <div id="weeklyReportPlanActualSection" class="weekly-report-section" hidden>
+          <h3 class="weekly-report-section__title">생산 실적 · 엑셀 붙여넣기용</h3>
+          <p id="weeklyReportPlanActualSummary" class="weekly-report-summary" aria-live="polite"></p>
+          <div class="weekly-report-toolbar filter-bar weekly-report-toolbar--filters" id="weeklyReportFilterBar" aria-label="주간보고 필터">
+            <div class="filter-field">
+              <span class="filter-label">보고 연도</span>
+              <input type="number" id="planVsActualReportYear" class="filter-input weekly-report-year-input" min="2020" max="2100" step="1" />
+            </div>
+            <div class="filter-field">
+              <span class="filter-label">파일명</span>
+              <div class="picker" id="pickerWeeklyReportFile">
+                <button type="button" class="picker-btn" id="btnWeeklyReportFilterFile">전체</button>
+                <div class="picker-panel" id="panelWeeklyReportFilterFile" hidden>
+                  <input type="search" class="picker-search" id="searchWeeklyReportFilterFile" placeholder="파일명 검색" autocomplete="off" />
+                  <div class="picker-list" id="listWeeklyReportFilterFile"></div>
+                </div>
+              </div>
+            </div>
+            <div class="filter-field">
+              <span class="filter-label">팀</span>
+              <div class="picker" id="pickerWeeklyReportTeam">
+                <button type="button" class="picker-btn" id="btnWeeklyReportFilterTeam">전체</button>
+                <div class="picker-panel" id="panelWeeklyReportFilterTeam" hidden>
+                  <input type="search" class="picker-search" id="searchWeeklyReportFilterTeam" placeholder="팀 검색" autocomplete="off" />
+                  <div class="picker-list" id="listWeeklyReportFilterTeam"></div>
+                </div>
+              </div>
+            </div>
+            <div class="filter-field">
+              <span class="filter-label">공정</span>
+              <div class="picker" id="pickerWeeklyReportProcess">
+                <button type="button" class="picker-btn" id="btnWeeklyReportFilterProcess">전체</button>
+                <div class="picker-panel" id="panelWeeklyReportFilterProcess" hidden>
+                  <input type="search" class="picker-search" id="searchWeeklyReportFilterProcess" placeholder="공정 검색" autocomplete="off" />
+                  <div class="picker-list" id="listWeeklyReportFilterProcess"></div>
+                </div>
+              </div>
+            </div>
+            <button type="button" class="btn btn-filter" id="btnWeeklyReportFilterReset">필터 초기화</button>
+            <button type="button" class="btn btn-filter" id="btnWeeklyReportExportXlsx">엑셀 다운로드</button>
+            <button type="button" class="btn ghost" id="btnWeeklyReportCopyTsv">표 복사 (엑셀 붙여넣기)</button>
+          </div>
+          <div class="timeline-slicer weekly-report-timeline" id="weeklyReportTimeline" hidden aria-label="기간 타임라인 슬라이서">
+            <div class="timeline-slicer__main">
+              <div class="timeline-slicer__head">
+                <span class="timeline-slicer__title">작업일자</span>
+                <button type="button" class="timeline-slicer__clear" id="btnWeeklyReportTimelineClear" title="기간 필터 지우기" aria-label="기간 필터 지우기">
+                  <span class="timeline-slicer__clear-icon" aria-hidden="true">⛌</span>
+                </button>
+              </div>
+              <div class="timeline-slicer__range-row">
+                <p class="timeline-slicer__range" id="weeklyReportTimelineRangeLabel">—</p>
+                <select id="weeklyReportTimelineGranularity" class="timeline-slicer__granularity" aria-label="일·월·년 단위">
+                  <option value="day">일</option>
+                  <option value="month" selected>월</option>
+                  <option value="year">년</option>
+                </select>
+              </div>
+              <div class="timeline-slicer__track-row">
+                <button type="button" class="timeline-slicer__nav" id="btnWeeklyReportTimelinePrev" aria-label="이전 구간">‹</button>
+                <div class="timeline-slicer__track-shell">
+                  <div class="timeline-slicer__track-body">
+                    <div class="timeline-slicer__year-rail" id="weeklyReportTimelineYearRail" hidden></div>
+                    <div class="timeline-slicer__track-main">
+                      <div class="timeline-slicer__bands" id="weeklyReportTimelineBands"></div>
+                      <p class="timeline-slicer__year-band" id="weeklyReportTimelineYearBand" hidden></p>
+                      <div class="timeline-slicer__track" id="weeklyReportTimelineTrack">
+                        <div class="timeline-slicer__ticks" id="weeklyReportTimelineTicks"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <button type="button" class="timeline-slicer__nav" id="btnWeeklyReportTimelineNext" aria-label="다음 구간">›</button>
+              </div>
+              <div class="timeline-slicer__scroll-row">
+                <input type="range" class="timeline-slicer__scroll" id="weeklyReportTimelineScroll" min="0" max="0" value="0" step="1" aria-label="타임라인 스크롤" />
+              </div>
+            </div>
+          </div>
+          <div id="weeklyReportPlanActualHost" class="weekly-report-plan-actual-host" aria-live="polite"></div>
+        </div>
+        <p id="planVsActualEmpty" class="empty-state">아직 생산 엑셀 데이터가 없습니다. 왼쪽 <strong>생산 엑셀 업로드</strong>에서 팀 파일을 올려 주세요.</p>
+        <details id="planVsActualDetailSection" class="plan-vs-actual-detail" hidden>
+          <summary class="plan-vs-actual-detail__summary">팀 · 일별 상세 (접기/펼치기)</summary>
         <div id="planVsActualFilterBar" class="filter-bar plan-vs-actual-filter-bar" hidden aria-label="팀·공정·기간 필터">
           <div class="plan-vs-actual-filter-topline">
             <div class="plan-vs-actual-filter-topline__dates plan-vs-actual-filter-row plan-vs-actual-filter-row--dates">
@@ -844,45 +969,92 @@
             </div>
           </div>
         </div>
-        <p id="planVsActualEmpty" class="empty-state">아직 생산 엑셀 데이터가 없습니다. 왼쪽 <strong>생산 엑셀 업로드</strong>에서 팀 파일을 올려 주세요.</p>
         <div id="planVsActualTeamsHost" class="plan-vs-actual-teams" aria-live="polite"></div>
+        </details>
       </div>
     </section>
 
     <section id="viewStockUnitPrice" class="view" hidden>
       <div class="panel">
-        <h2 class="view-title">재고 단가</h2>
+        <h2 class="view-title">재고금액 현황</h2>
+        <p class="view-desc view-desc--kicker">주간보고</p>
         <p class="view-desc">
-          <code>재고_단가.xlsx</code> 등 <strong>품목코드·품목명(또는 제품명)</strong>과 <strong>단가</strong>가 있는 파일을 올리면,
-          <strong>일별 통합표</strong>의 <strong>재고 금액</strong> 열에 <strong>재고 × 단가</strong>(원 단위 반올림)가 표시됩니다.
-          단가 열이 없고 <strong>매입기준액</strong>·<strong>현재고</strong>만 있으면 행마다 <strong>매입기준액 ÷ 현재고</strong>로 단가를 역산합니다.
-          여러 시트가 있으면 읽은 행 수가 가장 많은 시트를 사용합니다.
+          업로드한 <strong>재고_단가</strong> 기준으로 품목별 <strong>재고·재고 금액·단가</strong>를 확인합니다.
+          같은 단가는 <strong>일별 통합표</strong>의 재고 금액 열에도 반영됩니다.
         </p>
-        <label class="dropzone" id="stockUnitPriceDropzone">
-          <input type="file" id="stockUnitPriceFileInput" accept=".xlsx,.xls" hidden />
-          <span class="dropzone__text">재고_단가 파일 선택 또는 드래그</span>
-          <span class="dropzone__hint">품목코드 + 품목명(제품명)은 발주 보드와 동일하게 맞춰 주세요.</span>
-        </label>
-        <p class="file-name" id="stockUnitPriceFileName"></p>
-        <p class="sheet-info" id="stockUnitPriceSheetInfo"></p>
-        <div id="stockUnitPriceFilterBar" class="filter-bar filter-bar--hidden stock-unit-price-filter-bar" aria-label="재고 단가 품목코드 필터">
-          <div class="filter-field">
-            <span class="filter-label">품목코드</span>
-            <div class="picker" id="pickerStockUnitPriceCode">
-              <button type="button" class="picker-btn" id="btnStockUnitPriceFilterCode">전체</button>
-              <div class="picker-panel" id="panelStockUnitPriceFilterCode" hidden>
-                <input type="search" class="picker-search" id="searchStockUnitPriceFilterCode" placeholder="코드 검색" autocomplete="off" />
-                <div class="picker-list" id="listStockUnitPriceFilterCode"></div>
+        <p id="stockUnitPriceEmpty" class="empty-state">
+          아직 재고_단가 데이터가 없습니다. 왼쪽 <strong>재고_단가 엑셀 업로드</strong>에서 파일을 올려 주세요.
+        </p>
+        <div id="stockUnitPriceSection" class="weekly-report-section" hidden>
+          <p id="stockUnitPriceSummary" class="weekly-report-summary" aria-live="polite"></p>
+          <div id="stockUnitPriceFilterBar" class="filter-bar filter-bar--hidden stock-unit-price-filter-bar" aria-label="재고금액 현황 품목코드 필터">
+            <div class="filter-field">
+              <span class="filter-label">품목코드</span>
+              <div class="picker" id="pickerStockUnitPriceCode">
+                <button type="button" class="picker-btn" id="btnStockUnitPriceFilterCode">전체</button>
+                <div class="picker-panel" id="panelStockUnitPriceFilterCode" hidden>
+                  <input type="search" class="picker-search" id="searchStockUnitPriceFilterCode" placeholder="코드 검색" autocomplete="off" />
+                  <div class="picker-list" id="listStockUnitPriceFilterCode"></div>
+                </div>
               </div>
             </div>
+            <button type="button" class="btn btn-filter" id="btnStockUnitPriceFilterReset">초기화</button>
           </div>
-          <button type="button" class="btn btn-filter" id="btnStockUnitPriceFilterReset">초기화</button>
+          <div class="table-wrap stock-unit-price-table-wrap" id="stockUnitPriceTableWrap"></div>
         </div>
-        <p class="stock-unit-price-error" id="stockUnitPriceError" role="alert" hidden></p>
-        <div class="table-wrap stock-unit-price-table-wrap" id="stockUnitPriceTableWrap" hidden></div>
-        <p class="upload-hint">
-          발주 데이터를 이미 올린 뒤 이 파일만 다시 바꿔도 즉시 반영됩니다. 단가를 바꾼 뒤에는 <strong>일별 통합표</strong>로 이동해 확인하세요.
+      </div>
+    </section>
+
+    <section id="viewPlanVsActualByTeam" class="view" hidden>
+      <div class="panel">
+        <h2 class="view-title">팀별 계획대비 실적</h2>
+        <p class="view-desc view-desc--kicker">주간보고</p>
+        <p class="view-desc">
+          <strong>생산일지</strong>를 올리면 팀(드로잉·페럴·머플러·이중관·화승이중관)별로 나뉘어 <strong>계획대비 실적</strong>과 같은 표 양식(계획·실적·달성률)으로 표시합니다.
+          <strong>계획</strong>·<strong>달성률</strong>은 엑셀에 직접 넣으세요.
         </p>
+        <p id="planVsActualByTeamEmpty" class="empty-state">
+          아직 생산 엑셀 데이터가 없습니다. 왼쪽 <strong>생산 엑셀 업로드</strong>에서 팀 파일을 올려 주세요.
+        </p>
+        <div id="planVsActualByTeamSection" class="weekly-report-section" hidden>
+          <p id="planVsActualByTeamSummary" class="weekly-report-summary" aria-live="polite"></p>
+          <div class="weekly-report-toolbar filter-bar weekly-report-toolbar--filters" aria-label="팀별 보고 기간">
+            <div class="filter-field">
+              <span class="filter-label">보고 연도</span>
+              <input type="number" id="planVsActualByTeamReportYear" class="filter-input weekly-report-year-input" min="2020" max="2100" step="1" />
+            </div>
+            <div class="filter-field filter-field--grow">
+              <span class="filter-label">표시 팀</span>
+              <div id="planVsActualByTeamTeamFilter" class="plan-vs-chiplist" role="group" aria-label="표시할 팀"></div>
+            </div>
+            <div class="filter-field">
+              <span class="filter-label">기간 단위</span>
+              <select id="planVsActualByTeamPeriodView" class="filter-input weekly-report-period-select" aria-label="기간 단위">
+                <option value="week" selected>주</option>
+                <option value="month">월</option>
+                <option value="day">일</option>
+                <option value="year">년</option>
+              </select>
+            </div>
+            <button type="button" class="btn ghost" id="btnPlanVsActualByTeamCopyTsv">표 복사 (엑셀 붙여넣기)</button>
+          </div>
+          <div id="planVsActualByTeamHost" class="weekly-report-by-team-grid" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="viewShipmentVsStock" class="view" hidden>
+      <div class="panel">
+        <h2 class="view-title">출하 예정 수량 대비 재고 보유수량</h2>
+        <p class="view-desc view-desc--kicker">주간보고</p>
+        <p class="view-desc">
+          <strong>출하 예정 수량</strong>과 <strong>현재 재고 보유수량</strong>을 품목별로 맞춰 보는 주간보고 화면입니다.
+          발주·재고 데이터가 반영된 뒤 부족·여유를 확인할 수 있습니다.
+        </p>
+        <p id="shipmentVsStockEmpty" class="empty-state">
+          아직 발주·재고 데이터가 없습니다. 「발주서 엑셀 업로드」에서 발주·재고 파일을 올려 주세요.
+        </p>
+        <div id="shipmentVsStockHost" class="weekly-report-host" hidden></div>
       </div>
     </section>
 
@@ -902,13 +1074,6 @@
       </div>
     </section>
 
-    <section id="viewSummary" class="view" hidden>
-      <div class="panel">
-        <h2 class="view-title">요약</h2>
-        <p class="view-desc">업로드한 데이터 기준 집계입니다.</p>
-        <div id="summaryContent" class="summary-grid"></div>
-      </div>
-    </section>
   </div>
 
   <script src="assets/default-unit-prices.js"></script>
